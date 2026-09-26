@@ -142,11 +142,130 @@ async def investigate_host(source_ip: str):
     anomalies = await get_anomalies(source_ip=source_ip, size=20)
     timeline = await get_host_timeline(source_ip=source_ip, size=50)
 
+    # Build a security-focused RAG query from the latest anomaly evidence.
+    knowledge_query = (
+        "network security anomaly detection "
+        "host behavior "
+    )
+
+    latest_features = {}
+
+    if anomalies:
+        latest = anomalies[0]
+        latest_features = latest.get("features", {})
+
+        connection_count = latest_features.get("connection_count", 0)
+        unique_destinations = latest_features.get(
+            "unique_destination_count", 0
+        )
+        failed_connections = latest_features.get(
+            "failed_connection_count", 0
+        )
+        dns_queries = latest_features.get("dns_query_count", 0)
+
+        knowledge_query += (
+            f"high connection count {connection_count} "
+            f"unique destinations {unique_destinations} "
+            f"failed connections {failed_connections} "
+            f"DNS queries {dns_queries}"
+        )
+
+    knowledge = await search_knowledge(
+        query=knowledge_query,
+        top_k=3,
+    )
+
+    # ---------------------------------------------------------
+    # Deterministic security interpretation
+    # ---------------------------------------------------------
+
+    observations = []
+    investigation_focus = []
+
+    connection_count = latest_features.get("connection_count", 0)
+    unique_destinations = latest_features.get(
+        "unique_destination_count", 0
+    )
+    failed_connections = latest_features.get(
+        "failed_connection_count", 0
+    )
+    dns_queries = latest_features.get("dns_query_count", 0)
+
+    if anomalies:
+        observations.append(
+            f"{len(anomalies)} detected anomaly event(s) were identified "
+            f"for host {source_ip}."
+        )
+
+    if connection_count > 0:
+        observations.append(
+            f"The latest anomaly window contained "
+            f"{connection_count} network connections."
+        )
+
+    if unique_destinations > 0:
+        observations.append(
+            f"The host communicated with "
+            f"{unique_destinations} unique destination(s)."
+        )
+
+    if failed_connections > 0:
+        observations.append(
+            f"The anomaly window contained "
+            f"{failed_connections} failed connection(s)."
+        )
+
+        investigation_focus.append(
+            "Review destination IPs, destination ports, connection frequency, "
+            "and whether the failed connections are part of repeated attempts."
+        )
+
+    if dns_queries > 0:
+        observations.append(
+            f"The anomaly window contained "
+            f"{dns_queries} DNS quer{ 'y' if dns_queries == 1 else 'ies' }."
+        )
+
+        investigation_focus.append(
+            "Review queried domains and their frequency against the host baseline."
+        )
+
+    if connection_count > 0 and unique_destinations > 1:
+        investigation_focus.append(
+            "Review the destination distribution and determine whether the "
+            "connection volume is consistent with expected host activity."
+        )
+
+    if not anomalies:
+        assessment = (
+            "No detected anomalies were found for this host in the "
+            "available anomaly index."
+        )
+    else:
+        assessment = (
+            "The host exhibits behavior that was flagged by the anomaly "
+            "detection pipeline. The observed behavior should be compared "
+            "with the host's normal baseline and operational role before "
+            "determining whether it represents malicious activity."
+        )
+
+    if not investigation_focus:
+        investigation_focus.append(
+            "Compare the observed behavior with the host's historical baseline "
+            "and expected network activity."
+        )
+
     return {
         "source_ip": source_ip,
         "profile": profile,
         "anomalies": anomalies,
         "timeline": timeline,
+        "knowledge": knowledge,
+        "interpretation": {
+            "observations": observations,
+            "assessment": assessment,
+            "investigation_focus": investigation_focus,
+        },
     }
 
 

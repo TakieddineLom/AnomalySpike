@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DNS Analysis - AnomalyStrike</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<div id="dns-modal" class="connection-modal">
+    <div class="connection-modal-content">
+        <div class="connection-modal-header">
+            <h2>DNS Query Details</h2>
+            <button onclick="closeDnsDetails()">×</button>
+        </div>
+        <div id="dns-details"></div>
+    </div>
+</div>
+
+<body>
+
+<header class="topbar">
+    <div>
+        <h1>ANOMALYSTRIKE</h1>
+        <p>AI-Assisted Network Security Monitoring</p>
+    </div>
+    <div class="api-status">
+        <span class="status-dot"></span>
+        API Connected
+    </div>
+</header>
+
+<div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+
+    <main class="page-content">
+
+        <section class="page-header">
+            <div>
+                <h2>DNS Analysis</h2>
+                <p>DNS queries observed by Zeek</p>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2>Recent DNS Queries</h2>
+                    <p>Latest DNS activity collected by AnomalyStrike</p>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Source</th>
+                            <th>Query</th>
+                            <th>Type</th>
+                            <th>Response</th>
+                            <th>Answers</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dns-table">
+                        <tr><td colspan="6">Loading DNS queries...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script src="/static/shared.js"></script>
+
+<script>
+    loadSidebar("dns");
+
+    async function loadDns() {
+        try {
+            const response = await fetch("/api/events?size=100&event_type=dns");
+            const result = await response.json();
+
+            const table = document.getElementById("dns-table");
+
+            if (!result.events || result.events.length === 0) {
+                table.innerHTML = `<tr><td colspan="6">No DNS queries found.</td></tr>`;
+                return;
+            }
+
+            table.innerHTML = result.events.map(event => {
+                const data = event.data;
+                const zeek = data.zeek || {};
+
+                const timestamp = data["@timestamp"]
+                    ? new Date(data["@timestamp"]).toLocaleString()
+                    : "—";
+
+                const source = data.source
+                    ? `${data.source.ip || "—"}:${data.source.port || "—"}`
+                    : "—";
+
+                const query = zeek.query || "—";
+                const qtype = zeek.qtype_name || "—";
+                const rcode = zeek.rcode_name || "—";
+
+                const answers = Array.isArray(zeek.answers) && zeek.answers.length > 0
+                    ? zeek.answers.join(", ")
+                    : "—";
+
+                return `
+                    <tr class="connection-row"
+                        onclick='showDnsDetails(${JSON.stringify(data)})'>
+                        <td>${timestamp}</td>
+                        <td>${source}</td>
+                        <td>${query}</td>
+                        <td>${qtype}</td>
+                        <td>${rcode}</td>
+                        <td>${answers}</td>
+                    </tr>
+                `;
+            }).join("");
+
+        } catch (error) {
+            console.error("Failed to load DNS queries:", error);
+            document.getElementById("dns-table").innerHTML =
+                `<tr><td colspan="6">Failed to load DNS queries.</td></tr>`;
+        }
+    }
+
+    loadDns();
+</script>
+
+<script>
+function showDnsDetails(data) {
+    const zeek = data.zeek || {};
+
+    document.getElementById("dns-details").innerHTML = `
+        <div class="detail-grid">
+
+            <div class="detail-item">
+                <span>Source</span>
+                <strong>${data.source?.ip || "—"}:${data.source?.port || "—"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Destination</span>
+                <strong>${data.destination?.ip || "—"}:${data.destination?.port || "—"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Query</span>
+                <strong>${zeek.query || "—"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Query Type</span>
+                <strong>${zeek.qtype_name || "—"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Response Code</span>
+                <strong>${zeek.rcode_name || "—"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Rejected</span>
+                <strong>${zeek.rejected ? "Yes" : "No"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Answers</span>
+                <strong>${Array.isArray(zeek.answers) && zeek.answers.length > 0 ? zeek.answers.join(", ") : "—"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Zeek UID</span>
+                <strong>${zeek.uid || "—"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Timestamp</span>
+                <strong>${data["@timestamp"] || "—"}</strong>
+            </div>
+
+        </div>
+    `;
+
+    document.getElementById("dns-modal").classList.add("visible");
+}
+
+function closeDnsDetails() {
+    document.getElementById("dns-modal").classList.remove("visible");
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Connections - AnomalyStrike</title>
+
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<div id="connection-modal" class="connection-modal">
+    <div class="connection-modal-content">
+
+        <div class="connection-modal-header">
+            <h2>Connection Details</h2>
+            <button onclick="closeConnectionDetails()">×</button>
+        </div>
+
+        <div id="connection-details"></div>
+
+    </div>
+</div>
+
+<body>
+
+<header class="topbar">
+    <div>
+        <h1>ANOMALYSTRIKE</h1>
+        <p>AI-Assisted Network Security Monitoring</p>
+    </div>
+
+    <div class="api-status">
+        <span class="status-dot"></span>
+        API Connected
+    </div>
+</header>
+
+<div class="app-shell">
+
+    <div id="sidebar-placeholder"></div>
+
+    <main class="page-content">
+
+        <section class="page-header">
+            <div>
+                <h2>Network Connections</h2>
+                <p>Network flows observed by Zeek</p>
+            </div>
+        </section>
+
+        <section class="panel">
+
+            <div class="panel-header">
+                <div>
+                    <h2>Recent Connections</h2>
+                    <p>Latest network connections collected by AnomalyStrike</p>
+                </div>
+            </div>
+
+            <div class="table-container">
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Source</th>
+                            <th>Destination</th>
+                            <th>Protocol</th>
+                            <th>Duration</th>
+                            <th>Bytes</th>
+                            <th>State</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="connections-table">
+                        <tr>
+                            <td colspan="7">Loading connections...</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+<script src="/static/shared.js"></script>
+
+<script>
+    loadSidebar("connections");
+
+    async function loadConnections() {
+        try {
+            const response = await fetch("/api/events?size=100");
+            const result = await response.json();
+
+            const table = document.getElementById("connections-table");
+
+            if (!result.events || result.events.length === 0) {
+                table.innerHTML = `
+                    <tr>
+                        <td colspan="7">No network connections found.</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            table.innerHTML = result.events.map(event => {
+                const data = event.data;
+                const zeek = data.zeek || {};
+
+                const timestamp = data["@timestamp"]
+                    ? new Date(data["@timestamp"]).toLocaleString()
+                    : "—";
+
+                const source = data.source
+                    ? `${data.source.ip || "—"}:${data.source.port || "—"}`
+                    : "—";
+
+                const destination = data.destination
+                    ? `${data.destination.ip || "—"}:${data.destination.port || "—"}`
+                    : "—";
+
+                const protocol =
+                    zeek.service ||
+                    data.network?.transport ||
+                    "—";
+
+                const duration =
+                    zeek.duration !== undefined
+                        ? `${Number(zeek.duration).toFixed(3)} s`
+                        : "—";
+
+                const bytesSent = zeek.orig_bytes ?? 0;
+                const bytesReceived = zeek.resp_bytes ?? 0;
+
+                const totalBytes = bytesSent + bytesReceived;
+
+                const bytes = totalBytes.toLocaleString();
+
+                const state = zeek.conn_state || "—";
+
+                return `
+                    <tr class="connection-row"
+                        onclick='showConnectionDetails(${JSON.stringify(data)})'>
+
+                        <td>${timestamp}</td>
+                        <td>${source}</td>
+                        <td>${destination}</td>
+                        <td>${protocol}</td>
+                        <td>${duration}</td>
+                        <td>${bytes}</td>
+                        <td>${state}</td>
+
+                    </tr>
+                `;
+            }).join("");
+
+        } catch (error) {
+            console.error("Failed to load connections:", error);
+
+            document.getElementById("connections-table").innerHTML = `
+                <tr>
+                    <td colspan="7">Failed to load connections.</td>
+                </tr>
+            `;
+        }
+    }
+
+    loadConnections();
+</script>
+<script>
+function showConnectionDetails(data) {
+    const zeek = data.zeek || {};
+
+    document.getElementById("connection-details").innerHTML = `
+        <div class="detail-grid">
+
+            <div class="detail-item">
+                <span>Source</span>
+                <strong>
+                    ${data.source?.ip || "—"}:${data.source?.port || "—"}
+                </strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Destination</span>
+                <strong>
+                    ${data.destination?.ip || "—"}:${data.destination?.port || "—"}
+                </strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Service</span>
+                <strong>${zeek.service || "—"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Transport</span>
+                <strong>${data.network?.transport || "—"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Duration</span>
+                <strong>
+                    ${zeek.duration !== undefined
+                        ? Number(zeek.duration).toFixed(3) + " s"
+                        : "—"}
+                </strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Connection State</span>
+                <strong>${zeek.conn_state || "—"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Bytes Sent</span>
+                <strong>${(zeek.orig_bytes ?? 0).toLocaleString()}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Bytes Received</span>
+                <strong>${(zeek.resp_bytes ?? 0).toLocaleString()}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Packets Sent</span>
+                <strong>${(zeek.orig_pkts ?? 0).toLocaleString()}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Packets Received</span>
+                <strong>${(zeek.resp_pkts ?? 0).toLocaleString()}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>TCP History</span>
+                <strong>${zeek.history || "—"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Missed Bytes</span>
+                <strong>${(zeek.missed_bytes ?? 0).toLocaleString()}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Zeek UID</span>
+                <strong>${zeek.uid || "—"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Timestamp</span>
+                <strong>${data["@timestamp"] || "—"}</strong>
+            </div>
+
+        </div>
+    `;
+
+    document.getElementById("connection-modal").classList.add("visible");
+}
+
+function closeConnectionDetails() {
+    document.getElementById("connection-modal").classList.remove("visible");
+}
+</script>
+</body>
+</html>

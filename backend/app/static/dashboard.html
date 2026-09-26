@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnomalyStrike — Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+    <div>
+        <div class="logo">ANOMALY<span>STRIKE</span></div>
+        <div class="subtitle">AI-Assisted Network Security Monitoring</div>
+    </div>
+    <div class="api-status">
+        <span id="status-dot" class="status-dot offline"></span>
+        <span id="api-status">API OFFLINE</span>
+    </div>
+</header>
+
+<div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+
+    <main class="page-content">
+
+
+
+
+
+
+        <section class="network-selector-panel">
+            <div>
+                <div class="network-selector-label">MONITORED INTERFACE</div>
+                <div class="network-selector-description">Select the network interface you want to monitor</div>
+            </div>
+            <select id="network-selector">
+                <option value="">Loading interfaces...</option>
+            </select>
+        </section>
+
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">NETWORK EVENTS</div>
+                <div id="events-count" class="stat-value">—</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">ANOMALIES</div>
+                <div id="anomalies-count" class="stat-value danger">—</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">HOSTS</div>
+                <div id="hosts-count" class="stat-value">—</div>
+            </div>
+        </section>
+	<section class="panel chart-panel">
+	    <div class="panel-header">
+	        <div>
+	            <h2>Network Events</h2>
+	            <p>Network activity over time</p>
+	        </div>
+	    </div>
+
+	    <div class="chart-container">
+	        <canvas id="events-chart"></canvas>
+	    </div>
+	</section>
+
+
+
+
+        <section class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2>Recent Anomalies</h2>
+                    <p>Latest detected behavioral and ML signals</p>
+                </div>
+                <button id="refresh-btn">Refresh</button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>HOST</th><th>TIME</th><th>TYPE</th><th>SCORE</th><th>STATUS</th></tr>
+                    </thead>
+                    <tbody id="anomalies-table">
+                        <tr><td colspan="5" class="loading">Loading anomalies...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<footer>
+    AnomalyStrike MVP &nbsp;•&nbsp; FastAPI + OpenSearch + Zeek + Suricata
+</footer>
+
+<div id="anomaly-modal" class="modal">
+    <div class="modal-window">
+        <div class="modal-header">
+            <div></div>
+            <div id="modal-title" class="modal-title">Anomaly Investigation</div>
+            <div id="modal-subtitle" class="modal-subtitle">Host activity and detection evidence</div>
+            <button id="modal-close" class="modal-close">×</button>
+        </div>
+        <div id="anomaly-details" class="modal-body">Loading...</div>
+    </div>
+</div>
+
+<script src="/static/shared.js"></script>
+<script src="/static/renderer.js"></script>
+<script>loadSidebar("dashboard");</script>
+<script>
+async function loadEventsChart() {
+    try {
+        const response = await fetch("/api/events/timeseries?hours=24");
+        const result = await response.json();
+
+        const labels = result.points.map(point => {
+            const date = new Date(point.timestamp);
+
+            return date.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit"
+            });
+        });
+
+        const values = result.points.map(point => point.count);
+
+        const ctx = document.getElementById("events-chart");
+
+        new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "Network Events",
+                    data: values,
+                    tension: 0.3,
+                    fill: true,
+                    borderWidth: 2,
+                    pointRadius: 2,
+                    pointHoverRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+
+                interaction: {
+                    intersect: false,
+                    mode: "index"
+                },
+
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return ` ${context.parsed.y.toLocaleString()} events`;
+                            }
+                        }
+                    }
+                },
+
+                scales: {
+                    y: {
+                        beginAtZero: true,
+
+                        grid: {
+                            drawBorder: false
+                        },
+
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString();
+                            }
+                        },
+
+                        title: {
+                            display: true,
+                            text: "Events"
+                        }
+                    },
+
+                    x: {
+                        grid: {
+                            display: false
+                        },
+
+                        title: {
+                            display: true,
+                            text: "Time"
+                        }
+                    }
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error("Failed to load events chart:", error);
+    }
+}
+
+
+loadEventsChart();
+
+setInterval(() => {
+    location.reload();
+}, 60000);
+</script>    
+   
+</body>
+</html>

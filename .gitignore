@@ -1,0 +1,21 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pkl
+
+# Logs (generated at runtime, not source)
+logs/
+*.log
+
+# Zeek runtime output (generated, not source)
+data/zeek/
+
+# RAG index (regenerated from knowledge/ + embeddings.py)
+backend/app/rag/rag_index.json
+
+# Config with machine-specific values (each teammate creates their own)
+config/monitoring.json
+
+# OS/editor noise
+.DS_Store

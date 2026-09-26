@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+opensearch-py
+pydantic
+python-dotenv
+psutil

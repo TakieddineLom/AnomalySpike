@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Suricata Alerts - AnomalyStrike</title>
+
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<div id="alert-modal" class="alert-modal">
+    <div class="alert-modal-content">
+
+        <div class="alert-modal-header">
+            <h2>Alert Details</h2>
+            <button onclick="closeAlertDetails()">×</button>
+        </div>
+
+        <div id="alert-details"></div>
+
+    </div>
+</div>
+<body>
+
+<header class="topbar">
+    <div>
+        <h1>ANOMALYSTRIKE</h1>
+        <p>AI-Assisted Network Security Monitoring</p>
+    </div>
+
+    <div class="api-status">
+        <span class="status-dot"></span>
+        API Connected
+    </div>
+</header>
+
+<div class="app-shell">
+
+    <div id="sidebar-placeholder"></div>
+
+    <main class="page-content">
+
+        <section class="page-header">
+            <div>
+                <h2>Suricata Alerts</h2>
+                <p>Intrusion detection alerts collected from Suricata</p>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2>Recent Alerts</h2>
+                    <p>Latest security alerts detected by Suricata</p>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Signature</th>
+                            <th>Severity</th>
+                            <th>Source</th>
+                            <th>Destination</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="alerts-table">
+                        <tr>
+                            <td colspan="5">Loading alerts...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+</div>
+
+<script src="/static/shared.js"></script>
+
+<script>
+    loadSidebar("alerts");
+
+
+    async function loadAlerts() {
+    try {
+        const response = await fetch("/api/alerts?size=100");
+        const result = await response.json();
+
+        const table = document.getElementById("alerts-table");
+
+        if (!result.alerts || result.alerts.length === 0) {
+            table.innerHTML = `
+                <tr>
+                    <td colspan="5">No Suricata alerts found.</td>
+                </tr>
+            `;
+            return;
+        }
+
+        table.innerHTML = result.alerts.map(alert => {
+            const data = alert.data;
+            const suricata = data.suricata || {};
+
+            const timestamp = data["@timestamp"]
+                ? new Date(data["@timestamp"]).toLocaleString()
+                : "—";
+
+            const signature = suricata.signature || "—";
+            const severity = suricata.severity ?? "—";
+
+            const source = data.source
+                ? `${data.source.ip || "—"}:${data.source.port || "—"}`
+                : "—";
+
+            const destination = data.destination
+                ? `${data.destination.ip || "—"}:${data.destination.port || "—"}`
+                : "—";
+
+            return `
+                <tr class="alert-row"
+                    onclick='showAlertDetails(${JSON.stringify(alert.data)})'>
+
+                    <td>${timestamp}</td>
+                    <td>${signature}</td>
+                    <td>
+                        <span class="severity severity-${severity}">
+                            ${severity}
+                        </span>
+                    </td>
+                    <td>${source}</td>
+                    <td>${destination}</td>
+
+                </tr>
+            `;
+        }).join("");
+
+    } catch (error) {
+        console.error("Failed to load Suricata alerts:", error);
+
+        document.getElementById("alerts-table").innerHTML = `
+            <tr>
+                <td colspan="5">Failed to load alerts.</td>
+            </tr>
+        `;
+    }
+}
+
+            
+    loadAlerts();
+</script>
+<script>
+function showAlertDetails(data) {
+    const suricata = data.suricata || {};
+
+    document.getElementById("alert-details").innerHTML = `
+        <div class="detail-grid">
+
+            <div class="detail-item">
+                <span>Signature</span>
+                <strong>${suricata.signature || "—"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Category</span>
+                <strong>${suricata.category || "—"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Severity</span>
+                <strong>${suricata.severity ?? "—"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Action</span>
+                <strong>${suricata.action || "—"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Signature ID</span>
+                <strong>${suricata.signature_id || "—"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Protocol</span>
+                <strong>${suricata.protocol || "—"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Source</span>
+                <strong>
+                    ${data.source?.ip || "—"}:${data.source?.port || "—"}
+                </strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Destination</span>
+                <strong>
+                    ${data.destination?.ip || "—"}:${data.destination?.port || "—"}
+                </strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Transport</span>
+                <strong>${data.network?.transport || "—"}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Timestamp</span>
+                <strong>${data["@timestamp"] || "—"}</strong>
+            </div>
+
+        </div>
+    `;
+
+    document.getElementById("alert-modal").classList.add("visible");
+}
+
+function closeAlertDetails() {
+    document.getElementById("alert-modal").classList.remove("visible");
+}
+</script>
+</body>
+</html>

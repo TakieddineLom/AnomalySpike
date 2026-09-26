@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Threat Detection - AnomalyStrike</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="topbar">
+    <div>
+        <h1>ANOMALYSTRIKE</h1>
+        <p>AI-Assisted Network Security Monitoring</p>
+    </div>
+    <div class="api-status">
+        <span id="status-dot" class="status-dot offline"></span>
+        <span id="api-status">API OFFLINE</span>
+    </div>
+</header>
+
+<div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+
+    <main class="page-content">
+
+        <section class="page-header">
+            <div>
+                <h2>Threat Detection</h2>
+                <p>Behavioral and ML-based anomaly signals</p>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2>Detected Anomalies</h2>
+                    <p>Hosts flagged by the hybrid detection engine</p>
+                </div>
+                <button id="refresh-btn">Refresh</button>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>HOST</th>
+                            <th>TIME</th>
+                            <th>TYPE</th>
+                            <th>SCORE</th>
+                            <th>STATUS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="anomalies-table">
+                        <tr><td colspan="5" class="loading">Loading anomalies...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<div id="anomaly-modal" class="modal">
+    <div class="modal-window">
+        <div class="modal-header">
+            <div></div>
+            <div id="modal-title" class="modal-title">Anomaly Investigation</div>
+            <div id="modal-subtitle" class="modal-subtitle">Host activity and detection evidence</div>
+            <button id="modal-close" class="modal-close">×</button>
+        </div>
+        <div id="anomaly-details" class="modal-body">Loading...</div>
+    </div>
+</div>
+
+<script src="/static/shared.js"></script>
+<script src="/static/renderer.js"></script>
+<script>
+    loadSidebar("threats");
+
+    (async function loadThreats() {
+        try {
+            const response = await fetch("/api/anomalies?size=100");
+            const result = await response.json();
+
+            elements.apiStatus.textContent = "API ONLINE";
+            elements.statusDot.className = "status-dot online";
+
+            renderAnomalies(result.anomalies || []);
+
+        } catch (error) {
+            console.error("Failed to load threats:", error);
+            elements.apiStatus.textContent = "API OFFLINE";
+            elements.statusDot.className = "status-dot offline";
+        }
+    })();
+
+    if (elements.refreshButton) {
+        elements.refreshButton.addEventListener("click", () => {
+            location.reload();
+        });
+    }
+</script>
+
+</body>
+</html>

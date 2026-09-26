@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Settings - AnomalyStrike</title>
+
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<header class="topbar">
+    <div>
+        <h1>ANOMALYSTRIKE</h1>
+        <p>AI-Assisted Network Security Monitoring</p>
+    </div>
+
+    <div class="api-status">
+        <span class="status-dot"></span>
+        API Connected
+    </div>
+</header>
+
+<div class="app-shell">
+
+    <div id="sidebar-placeholder"></div>
+
+    <main class="page-content">
+
+        <section class="page-header">
+            <div>
+                <h2>Settings</h2>
+                <p>Configure AnomalyStrike monitoring and system options</p>
+            </div>
+        </section>
+
+        <section class="panel">
+
+            <div class="panel-header">
+                <div>
+                    <h2>Network Monitoring</h2>
+                    <p>Select the network interface monitored by AnomalyStrike</p>
+                </div>
+            </div>
+
+            <div class="settings-section">
+
+                <label for="network-selector">
+                    Monitored Interface
+                </label>
+
+                <select id="network-selector">
+                    <option value="">Loading interfaces...</option>
+                </select>
+
+                <p class="settings-description">
+                    This interface will be used by the network monitoring
+                    sensors such as Zeek and Suricata.
+                </p>
+
+                <button id="save-interface" class="settings-button">
+                    Save Interface
+                </button>
+
+                <span id="save-status"></span>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<script src="/static/shared.js"></script>
+
+<script>
+    loadSidebar("settings");
+
+    const selector = document.getElementById("network-selector");
+    const saveButton = document.getElementById("save-interface");
+    const saveStatus = document.getElementById("save-status");
+
+    async function loadInterfaces() {
+        try {
+            const [interfacesResponse, selectedResponse] = await Promise.all([
+                fetch("/api/interfaces"),
+                fetch("/api/interfaces/selected")
+            ]);
+
+            const interfacesData = await interfacesResponse.json();
+            const selectedData = await selectedResponse.json();
+
+            selector.innerHTML = "";
+
+            interfacesData.interfaces
+                .filter(iface =>
+                    iface.name !== "lo" &&
+                    !iface.name.startsWith("docker") &&
+                    !iface.name.startsWith("br-") &&
+                    !iface.name.startsWith("veth")
+                )
+                .forEach(iface => {
+                    const option = document.createElement("option");
+
+                    option.value = iface.name;
+                    option.textContent =
+                        `${iface.name} — ${iface.ip || "No IP"} — ${iface.status}`;
+
+                    selector.appendChild(option);
+                });
+
+            if (selectedData.interface) {
+                selector.value = selectedData.interface;
+            }
+
+        } catch (error) {
+            console.error("Failed to load interfaces:", error);
+            selector.innerHTML = '<option value="">Failed to load interfaces</option>';
+        }
+    }
+
+    saveButton.addEventListener("click", async () => {
+        const interfaceName = selector.value;
+
+        if (!interfaceName) {
+            return;
+        }
+
+        saveButton.disabled = true;
+        saveStatus.textContent = "Saving...";
+
+        try {
+            const response = await fetch(
+                `/api/interfaces/select?interface=${encodeURIComponent(interfaceName)}`,
+                {
+                    method: "POST"
+                }
+            );
+
+            const data = await response.json();
+
+            if (response.ok) {
+                saveStatus.textContent = `Saved: ${data.interface}`;
+            } else {
+                saveStatus.textContent = "Failed to save";
+            }
+
+        } catch (error) {
+            console.error("Failed to save interface:", error);
+            saveStatus.textContent = "Failed to save";
+        } finally {
+            saveButton.disabled = false;
+        }
+    });
+
+    loadInterfaces();
+</script>
+
+
+
+</body>
+</html>

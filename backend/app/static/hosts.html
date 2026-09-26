@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connected Hosts - AnomalyStrike</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="topbar">
+    <div>
+        <h1>ANOMALYSTRIKE</h1>
+        <p>AI-Assisted Network Security Monitoring</p>
+    </div>
+    <div class="api-status">
+        <span class="status-dot"></span>
+        API Connected
+    </div>
+</header>
+
+<div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+
+    <main class="page-content">
+
+        <section class="page-header">
+            <div>
+                <h2>Connected Hosts</h2>
+                <p>Hosts observed on the network in the last 24 hours</p>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2>Active Hosts</h2>
+                    <p>Based on live Zeek connection data</p>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Host IP</th>
+                            <th>Connections</th>
+                            <th>Unique Destinations</th>
+                            <th>First Seen</th>
+                            <th>Last Seen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hosts-table">
+                        <tr><td colspan="5">Loading hosts...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script src="/static/shared.js"></script>
+
+<script>
+    loadSidebar("hosts");
+
+    async function loadHosts() {
+        try {
+            const response = await fetch("/api/hosts/live");
+            const result = await response.json();
+
+            const table = document.getElementById("hosts-table");
+
+            if (!result.hosts || result.hosts.length === 0) {
+                table.innerHTML = `<tr><td colspan="5">No hosts found.</td></tr>`;
+                return;
+            }
+
+            table.innerHTML = result.hosts.map(host => {
+                const firstSeen = host.first_seen
+                    ? new Date(host.first_seen).toLocaleString()
+                    : "—";
+
+                const lastSeen = host.last_seen
+                    ? new Date(host.last_seen).toLocaleString()
+                    : "—";
+
+                return `
+                    <tr>
+                        <td>${host.ip}</td>
+                        <td>${host.connection_count.toLocaleString()}</td>
+                        <td>${host.unique_destinations}</td>
+                        <td>${firstSeen}</td>
+                        <td>${lastSeen}</td>
+                    </tr>
+                `;
+            }).join("");
+
+        } catch (error) {
+            console.error("Failed to load hosts:", error);
+            document.getElementById("hosts-table").innerHTML =
+                `<tr><td colspan="5">Failed to load hosts.</td></tr>`;
+        }
+    }
+
+    loadHosts();
+</script>
+
+</body>
+</html>

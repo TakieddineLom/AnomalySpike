@@ -142,45 +142,14 @@ async def investigate_host(source_ip: str):
     anomalies = await get_anomalies(source_ip=source_ip, size=20)
     timeline = await get_host_timeline(source_ip=source_ip, size=50)
 
-    # Build a security-focused RAG query from the latest anomaly evidence.
-    knowledge_query = (
-        "network security anomaly detection "
-        "host behavior "
-    )
+    # ---------------------------------------------------------
+    # Extract latest anomaly features
+    # ---------------------------------------------------------
 
     latest_features = {}
 
     if anomalies:
-        latest = anomalies[0]
-        latest_features = latest.get("features", {})
-
-        connection_count = latest_features.get("connection_count", 0)
-        unique_destinations = latest_features.get(
-            "unique_destination_count", 0
-        )
-        failed_connections = latest_features.get(
-            "failed_connection_count", 0
-        )
-        dns_queries = latest_features.get("dns_query_count", 0)
-
-        knowledge_query += (
-            f"high connection count {connection_count} "
-            f"unique destinations {unique_destinations} "
-            f"failed connections {failed_connections} "
-            f"DNS queries {dns_queries}"
-        )
-
-    knowledge = await search_knowledge(
-        query=knowledge_query,
-        top_k=3,
-    )
-
-    # ---------------------------------------------------------
-    # Deterministic security interpretation
-    # ---------------------------------------------------------
-
-    observations = []
-    investigation_focus = []
+        latest_features = anomalies[0].get("features", {})
 
     connection_count = latest_features.get("connection_count", 0)
     unique_destinations = latest_features.get(
@@ -191,68 +160,265 @@ async def investigate_host(source_ip: str):
     )
     dns_queries = latest_features.get("dns_query_count", 0)
 
+    # ---------------------------------------------------------
+    # Build RAG query
+    # ---------------------------------------------------------
+
+    knowledge_query = (
+        "network security anomaly detection "
+        "host behavior "
+        f"connection count {connection_count} "
+        f"unique destinations {unique_destinations} "
+        f"failed connections {failed_connections} "
+        f"DNS queries {dns_queries}"
+    )
+
+    knowledge = await search_knowledge(
+        query=knowledge_query,
+        top_k=3,
+    )
+
+    # ---------------------------------------------------------
+    # Analyze timeline context
+    # ---------------------------------------------------------
+
+    timeline_event_types = {}
+    timeline_destinations = set()
+    timeline_failed = 0
+
+    for event in timeline:
+        event_type = event.get("event", {}).get("type")
+
+        if event_type:
+            timeline_event_types[event_type] = (
+                timeline_event_types.get(event_type, 0) + 1
+            )
+
+        destination_ip = event.get("destination", {}).get("ip")
+
+        if destination_ip:
+            timeline_destinations.add(destination_ip)
+
+        state = event.get("zeek", {}).get("conn", {}).get("state")
+
+        if state in {"REJ", "RSTO", "RSTR", "S0"}:
+            timeline_failed += 1
+
+    # ---------------------------------------------------------
+    # Analyze host profile context
+    # ---------------------------------------------------------
+
+    profile_data = profile.get("profile", {}) if profile.get("found") else {}
+
+    profile_features = profile_data.get("features", {})
+
+    baseline_context = {
+        "profile_available": bool(profile.get("found")),
+        "timeline_events": len(timeline),
+        "timeline_unique_destinations": len(timeline_destinations),
+        "timeline_failed_connections": timeline_failed,
+        "timeline_event_types": timeline_event_types,
+        "profile_features": profile_features,
+    }
+
+    # ---------------------------------------------------------
+    # Build observations
+    # ---------------------------------------------------------
+
+    observations = []
+
     if anomalies:
         observations.append(
             f"{len(anomalies)} detected anomaly event(s) were identified "
             f"for host {source_ip}."
         )
+    else:
+        observations.append(
+            f"No detected anomaly events were found for host {source_ip}."
+        )
 
-    if connection_count > 0:
+    if connection_count:
         observations.append(
             f"The latest anomaly window contained "
             f"{connection_count} network connections."
         )
 
-    if unique_destinations > 0:
+    if unique_destinations:
         observations.append(
-            f"The host communicated with "
+            f"The latest anomaly window involved "
             f"{unique_destinations} unique destination(s)."
         )
 
-    if failed_connections > 0:
+    if failed_connections:
         observations.append(
-            f"The anomaly window contained "
+            f"The latest anomaly window contained "
             f"{failed_connections} failed connection(s)."
         )
 
+    if dns_queries:
+        observations.append(
+            f"The latest anomaly window contained "
+            f"{dns_queries} DNS quer{'y' if dns_queries == 1 else 'ies'}."
+        )
+
+    if timeline:
+        observations.append(
+            f"The available host timeline contains "
+            f"{len(timeline)} recent network event(s)."
+        )
+
+    if timeline_destinations:
+        observations.append(
+            f"The recent timeline contains "
+            f"{len(timeline_destinations)} unique destination IP(s)."
+        )
+
+    # ---------------------------------------------------------
+    # Compare latest anomaly with available timeline context
+    # ---------------------------------------------------------
+
+    comparison = {
+        "latest_connection_count": connection_count,
+        "latest_unique_destinations": unique_destinations,
+        "latest_failed_connections": failed_connections,
+        "timeline_event_count": len(timeline),
+        "timeline_unique_destinations": len(timeline_destinations),
+        "timeline_failed_connections": timeline_failed,
+    }
+
+    if timeline and unique_destinations:
+        if len(timeline_destinations) >= unique_destinations:
+            baseline_statement = (
+                "The recent timeline contains a destination set at least "
+                "as broad as the latest anomalous window. This does not by "
+                "itself establish that the latest behavior is malicious."
+            )
+        else:
+            baseline_statement = (
+                "The latest anomalous window involves more unique destinations "
+                "than are represented in the available recent timeline. "
+                "Additional historical data would help determine whether this "
+                "is unusual for the host."
+            )
+    else:
+        baseline_statement = (
+            "There is insufficient timeline data to establish a reliable "
+            "host-specific behavioral baseline."
+        )
+
+        # ---------------------------------------------------------
+    # Evidence-linked possible explanations
+    # ---------------------------------------------------------
+
+    possible_explanations = []
+
+    for item in knowledge:
+        source = item.get("source")
+        content = item.get("content", "")
+
+        if "Failed Connections" in content and failed_connections:
+            possible_explanations.append({
+                "behavior": "Failed connections",
+                "observed": failed_connections,
+                "context": [
+                    "Unavailable services",
+                    "Network problems",
+                    "Repeated connection attempts",
+                    "Port scanning",
+                ],
+                "source": source,
+            })
+
+        if "High Connection Volume" in content and connection_count:
+            possible_explanations.append({
+                "behavior": "High connection volume",
+                "observed": connection_count,
+                "context": [
+                    "Service discovery",
+                    "Automated applications",
+                    "Monitoring activity",
+                    "Misconfiguration",
+                    "Network scanning",
+                ],
+                "source": source,
+            })
+
+        if "Repeated Connections" in content:
+            possible_explanations.append({
+                "behavior": "Repeated connections",
+                "observed": None,
+                "context": [
+                    "Normal application traffic",
+                    "Periodic service communication",
+                    "Automated processes",
+                    "Persistent or repeated suspicious activity",
+                ],
+                "source": source,
+            })
+
+    # ---------------------------------------------------------
+    # Investigation focus
+    # ---------------------------------------------------------
+
+    investigation_focus = []
+
+    if failed_connections:
         investigation_focus.append(
             "Review destination IPs, destination ports, connection frequency, "
-            "and whether the failed connections are part of repeated attempts."
+            "and whether failed connections form repeated attempts."
         )
 
-    if dns_queries > 0:
-        observations.append(
-            f"The anomaly window contained "
-            f"{dns_queries} DNS quer{ 'y' if dns_queries == 1 else 'ies' }."
-        )
-
+    if unique_destinations:
         investigation_focus.append(
-            "Review queried domains and their frequency against the host baseline."
+            "Compare the destination distribution of the latest anomaly with "
+            "the host's historical communication pattern."
         )
 
-    if connection_count > 0 and unique_destinations > 1:
+    if connection_count:
         investigation_focus.append(
-            "Review the destination distribution and determine whether the "
-            "connection volume is consistent with expected host activity."
+            "Determine whether the connection volume is expected for the "
+            "host's operational role."
         )
 
-    if not anomalies:
-        assessment = (
-            "No detected anomalies were found for this host in the "
-            "available anomaly index."
+    if dns_queries:
+        investigation_focus.append(
+            "Review queried domains and compare their frequency with the "
+            "host's normal DNS behavior."
         )
-    else:
-        assessment = (
-            "The host exhibits behavior that was flagged by the anomaly "
-            "detection pipeline. The observed behavior should be compared "
-            "with the host's normal baseline and operational role before "
-            "determining whether it represents malicious activity."
+
+    if not profile.get("found"):
+        investigation_focus.append(
+            "Obtain a current correlated host profile before making a "
+            "host-specific baseline assessment."
+        )
+
+    if not timeline:
+        investigation_focus.append(
+            "Collect additional timeline data to establish historical behavior."
         )
 
     if not investigation_focus:
         investigation_focus.append(
-            "Compare the observed behavior with the host's historical baseline "
-            "and expected network activity."
+            "Compare the observed behavior with the host's historical "
+            "baseline and expected operational activity."
+        )
+
+    # ---------------------------------------------------------
+    # Assessment
+    # ---------------------------------------------------------
+
+    if anomalies:
+        assessment = (
+            "The host exhibits behavior flagged by the anomaly detection "
+            "pipeline. The available profile and timeline provide contextual "
+            "evidence, but they are not sufficient on their own to determine "
+            "whether the behavior is malicious."
+        )
+    else:
+        assessment = (
+            "No anomaly was detected for this host in the available anomaly "
+            "index. The available timeline and profile can still be used to "
+            "establish its normal behavioral baseline."
         )
 
     return {
@@ -264,6 +430,9 @@ async def investigate_host(source_ip: str):
         "interpretation": {
             "observations": observations,
             "assessment": assessment,
+            "baseline_context": baseline_context,
+            "comparison": comparison,
+            "possible_explanations": possible_explanations,
             "investigation_focus": investigation_focus,
         },
     }

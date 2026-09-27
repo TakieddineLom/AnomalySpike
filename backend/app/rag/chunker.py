@@ -1,6 +1,9 @@
 from .loader import load_documents
 
 
+MIN_CHUNK_LENGTH = 80
+
+
 def chunk_documents(documents):
     chunks = []
 
@@ -8,6 +11,8 @@ def chunk_documents(documents):
         content = document["content"].strip()
 
         sections = content.split("\n## ")
+
+        buffer = ""
 
         for index, section in enumerate(sections):
             if index == 0:
@@ -20,24 +25,23 @@ def chunk_documents(documents):
             if not section_text:
                 continue
 
+            combined = (buffer + "\n\n" + section_text).strip() if buffer else section_text
+
+            if len(combined) < MIN_CHUNK_LENGTH:
+                buffer = combined
+                continue
+
             chunks.append({
                 "source": document["source"],
-                "content": section_text,
+                "content": combined,
+            })
+
+            buffer = ""
+
+        if buffer:
+            chunks.append({
+                "source": document["source"],
+                "content": buffer,
             })
 
     return chunks
-
-
-if __name__ == "__main__":
-    documents = load_documents()
-    chunks = chunk_documents(documents)
-
-    print(f"Loaded documents: {len(documents)}")
-    print(f"Generated chunks: {len(chunks)}")
-
-    for index, chunk in enumerate(chunks[:10], start=1):
-        print(
-            f"\nChunk {index} "
-            f"({chunk['source']}, {len(chunk['content'])} characters)"
-        )
-        print(chunk["content"][:300].replace("\n", " "))

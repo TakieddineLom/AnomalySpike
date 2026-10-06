@@ -238,8 +238,14 @@ function renderAnomalies(anomalies) {
 
         elements.anomaliesTable.innerHTML = `
             <tr>
-                <td colspan="5" class="loading">
-                    No anomalies detected
+                <td colspan="5" class="loading anomaly-empty">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✓</div>
+                        <div class="empty-state-title">No anomalies detected</div>
+                        <div class="empty-state-text">
+                            No suspicious behavioral or ML signals have been detected.
+                        </div>
+                    </div>
                 </td>
             </tr>
         `;
@@ -247,27 +253,45 @@ function renderAnomalies(anomalies) {
         return;
     }
 
-
     elements.anomaliesTable.innerHTML =
         anomalies.map((anomaly, index) => {
 
             const type = getAnomalyType(anomaly);
-
             const host = getHost(anomaly);
-
             const timestamp = getTimestamp(anomaly);
-
             const score = getScore(anomaly);
+
+            const data = getData(anomaly);
+            const detection = data.detection || {};
+
+            const behavioral = detection.behavioral_anomaly === true;
+            const ml = detection.ml_anomaly === true;
+
+            let severityLabel = "DETECTED";
+            let severityClass = "status-detected";
+
+            if (behavioral && ml) {
+                severityLabel = "HIGH";
+                severityClass = "status-high";
+            } else if (behavioral || ml) {
+                severityLabel = "MEDIUM";
+                severityClass = "status-medium";
+            }
 
             return `
                 <tr
-                    class="anomaly-row"
+                    class="anomaly-row ${severityClass}"
                     data-anomaly-index="${index}"
                     title="Click to investigate this anomaly"
                 >
 
-                    <td class="ip">
-                        ${escapeHtml(host)}
+                    <td>
+                        <div class="anomaly-host">
+                            <span class="anomaly-host-indicator"></span>
+                            <span class="ip">
+                                ${escapeHtml(host)}
+                            </span>
+                        </div>
                     </td>
 
                     <td class="time">
@@ -281,12 +305,15 @@ function renderAnomalies(anomalies) {
                     </td>
 
                     <td>
-                        ${escapeHtml(score)}
+                        <span class="anomaly-score">
+                            ${escapeHtml(score)}
+                        </span>
                     </td>
 
                     <td>
-                        <span class="badge badge-anomaly">
-                            DETECTED
+                        <span class="anomaly-status ${severityClass}">
+                            <span class="status-dot-small"></span>
+                            ${severityLabel}
                         </span>
                     </td>
 
@@ -294,7 +321,6 @@ function renderAnomalies(anomalies) {
             `;
 
         }).join("");
-
 
     // Make every anomaly clickable
     document.querySelectorAll(".anomaly-row").forEach(row => {

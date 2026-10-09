@@ -1,100 +1,219 @@
-# AnomalyStrike
+# AnomalySpike
 
-AI-assisted network security monitoring platform. Combines Suricata (signature-based IDS), Zeek (network telemetry), a hybrid ML/behavioral anomaly detection engine, and a RAG-based security knowledge search — all surfaced through a web dashboard.
+**AI-assisted network security monitoring and anomaly investigation in one web console.**
 
-## Architecture 
-Suricata (IDS) ──┐
-├─→ Collectors ─→ OpenSearch ─→ FastAPI ─→ Web Dashboard
-Zeek (telemetry) ─┘ ↑
-│
-features.py (cron, every minute)
-│
-↓
-detection/engine.py (cron, every minute)
-│
-↓
-anomalystrike-anomalies index
+AnomalySpike is a team-built cybersecurity prototype developed during the Thirduni programme. It brings together network telemetry, intrusion-detection alerts, machine-learning-based anomaly detection, and retrieval-based security knowledge to help small IT and security teams investigate potentially suspicious network activity.
 
-**Data flow:**
-1. Suricata and Zeek capture live traffic on `ens33` and write to their own log files.
-2. Dedicated collectors tail those logs and write normalized documents into OpenSearch (`anomalystrike-alerts`, `anomalystrike-events`).
-3. `features.py` aggregates raw events into 1-minute host-behavior windows (`anomalystrike-features`).
-4. `detection/engine.py` scores each window with a hybrid behavioral + ML model, writing flagged anomalies to `anomalystrike-anomalies`.
-5. The FastAPI backend (`backend/app/main.py`) serves both the REST API and the static web dashboard from the same origin.
-6. A RAG pipeline (`backend/app/rag/`) provides semantic search over a small security-knowledge base (MITRE ATT&CK, network behavior notes), surfaced live in the anomaly investigation modal.
+> **Project status:** Prototype. Detection coverage, operational reliability, and performance require further evaluation. Some components use test data, as noted below.
 
-## Web pages
+## The problem
 
-| Page | Route | Data source |
+Security teams often need to move between network logs, IDS alerts, and reference documentation to understand suspicious activity. Smaller teams may not have the resources for complex commercial monitoring platforms.
+
+AnomalySpike explores how open-source network sensors, a searchable event store, anomaly scoring, and security knowledge retrieval can make this investigation workflow more accessible.
+
+## Features
+
+- **Network telemetry:** Collects and indexes events produced by Zeek.
+- **IDS alerts:** Ingests Suricata alerts for review in the web console.
+- **Anomaly detection:** Aggregates network activity into host-behaviour feature windows and scores them with the project's detection pipeline.
+- **Security knowledge search:** Retrieves relevant information from a small security knowledge base, including MITRE ATT&CK and network-behaviour notes.
+- **Host investigation:** Provides views for reviewing hosts and their observed activity.
+- **Web console:** Dashboard, alerts, connections, DNS analysis, threat detection, hosts, and interface settings.
+- **Interface selection:** Lets an operator select the interface recorded in the monitoring configuration. Sensor services may need to be restarted before the selection takes effect.
+
+## Architecture
+
+```text
+              Network traffic
+                /         \
+             Zeek        Suricata
+               |             |
+         Zeek collectors   Alert collector
+               |             |
+               +------v------+
+                      |
+                  OpenSearch
+                      |
+                 FastAPI API
+                      |
+                 Web console
+
+       Events -> Feature aggregation -> Anomaly scoring
+                                            |
+                                  Anomaly index / UI
+
+       Security knowledge -> Retrieval search -> Investigation context
+```
+
+### Data flow
+
+1. Zeek provides network telemetry, while Suricata produces intrusion-detection alerts.
+2. Collector processes normalize selected sensor output and index it in OpenSearch.
+3. Feature aggregation builds host-behaviour windows from observed events.
+4. The detection pipeline scores feature windows and stores flagged anomalies.
+5. FastAPI exposes API endpoints and serves the browser-based console.
+6. The retrieval-based knowledge component searches a small security reference collection to provide additional investigation context.
+
+The actual data sources and collection behaviour vary by component. See [Known limitations](#known-limitations) before interpreting the output as a complete live security-monitoring system.
+
+## Web console
+
+| Page | Route | Purpose |
 |---|---|---|
-| Dashboard | `/dashboard` | stats, events chart, anomalies overview |
-| Suricata Alerts | `/alerts` | `anomalystrike-alerts` |
-| Connections | `/connections` | `anomalystrike-events` (Zeek conn.log) |
-| DNS Analysis | `/dns` | `anomalystrike-events` (Zeek dns.log) — *currently reading a static test file, not live Zeek output* |
-| Threat Detection | `/threats` | `anomalystrike-anomalies`, with RAG-backed knowledge in the investigation modal |
-| Connected Hosts | `/hosts` | live aggregation over `anomalystrike-events` |
-| Settings | `/settings` | monitored interface selection |
+| Dashboard | `/dashboard` | Overview of monitoring activity |
+| Suricata alerts | `/alerts` | Review indexed IDS alerts |
+| Connections | `/connections` | Inspect indexed Zeek connection events |
+| DNS analysis | `/dns` | Review DNS data; currently uses a static test file |
+| Threat detection | `/threats` | Review detected anomalies and related knowledge |
+| Connected hosts | `/hosts` | Inspect hosts observed in indexed events |
+| Settings | `/settings` | Select the monitored network interface |
 
-## Services (systemd)
+The application also exposes API endpoints, including `/api/status`, `/api/health`, `/api/events`, `/api/interfaces`, and `/api/knowledge/search`. The exact response and data availability depend on the running services and indexed data.
 
-All core components run as systemd services, enabled to start on boot:
+## Technology stack
 
-- `anomalystrike-backend` — FastAPI + web dashboard (port 8000)
-- `anomalystrike-zeek` — Zeek sensor on `ens33`
-- `anomalystrike-zeek-collector` — ingests Zeek connection events
-- `anomalystrike-zeek-dns-collector` — ingests Zeek DNS events (reads a static test file, see note above)
-- `anomalystrike-suricata-collector` — ingests Suricata alerts
+- **Language:** Python, HTML, CSS, JavaScript
+- **API and web server:** FastAPI, Uvicorn
+- **Search and event storage:** OpenSearch
+- **Network visibility:** Zeek
+- **Intrusion detection:** Suricata
+- **Machine learning and numerical processing:** scikit-learn, PyOD, NumPy, SciPy, joblib
+- **Knowledge retrieval and embeddings:** sentence-transformers, PyTorch
+- **Tool integration:** Model Context Protocol (MCP)
+- **Deployment components:** Ubuntu/Linux, Docker Compose, systemd, cron
 
-Suricata itself and OpenSearch (Docker, `unless-stopped` restart policy) run independently and also survive reboot.
+## Requirements
 
-### Common operations
+The current development deployment uses Ubuntu, Python, Docker with Docker Compose, OpenSearch, Zeek, and Suricata.
+
+Python dependencies are pinned in `backend/requirements.txt`.
+
+The repository's current deployment configuration is tailored to the development environment. In particular, the backend uses a fixed configuration path under `/home/taki/AnomalyStrike`. A fresh installation on another machine will require configuration changes and validation.
+
+## Running the web application
+
+These steps start the API and web console after the required services and configuration are available. They do **not** install or configure Zeek, Suricata, collectors, scheduled feature processing, or OpenSearch automatically.
+
+### 1. Clone the repository
 
 ```bash
-# Check everything
-sudo systemctl status anomalystrike-backend anomalystrike-zeek anomalystrike-zeek-collector anomalystrike-zeek-dns-collector anomalystrike-suricata-collector --no-pager
-
-# Stop everything
-sudo systemctl stop anomalystrike-backend anomalystrike-zeek anomalystrike-zeek-collector anomalystrike-zeek-dns-collector anomalystrike-suricata-collector
-
-# Start everything
-sudo systemctl start anomalystrike-backend anomalystrike-zeek anomalystrike-zeek-collector anomalystrike-zeek-dns-collector anomalystrike-suricata-collector
-
-# Restart one service (e.g. after a code change)
-sudo systemctl restart anomalystrike-backend
-
-# Tail a service's logs
-sudo journalctl -u anomalystrike-backend -f
+git clone https://github.com/TakieddineLom/AnomalyStrike.git
+cd AnomalyStrike
 ```
 
-`features.py` and `detection/engine.py` run via cron (every minute), not systemd — check with `crontab -l`, logs in `logs/features.log` and `logs/detection.log`.
-
-**Never** start any of these components manually outside systemd/cron — doing so risks running duplicate processes alongside the managed ones (this happened once with Zeek; see git history / past incident).
-
-## Changing the monitored interface
-
-Saving a new interface in Settings updates `config/monitoring.json`, but Zeek and Suricata only read their interface at startup. After changing it:
+### 2. Create a Python environment
 
 ```bash
-sudo systemctl restart anomalystrike-zeek
-# Suricata's interface is configured separately in /etc/suricata/suricata.yaml
-```
-
-## Known limitations / open items
-
-- DNS collector reads from a static test file (`data/zeek/json-test/dns.log`), not Zeek's live `dns.log` — DNS Analysis page shows fixed sample data.
-- Suricata collector re-anchors to end-of-file on every restart; alerts generated during a crash/restart window are not backfilled.
-- RAG knowledge base is small (11 chunks, MITRE ATT&CK + network behavior notes) — retrieval quality will improve with more content.
-- ML anomaly flag rate should be periodically checked against real idle traffic; retrain via `backend/app/models/train.py` if it over-flags.
-
-## Development
-
-```bash
-cd ~/AnomalyStrike
+python3 -m venv .venv
 source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r backend/requirements.txt
+```
 
-# Validate Python syntax before restarting a service
-.venv/bin/python -m py_compile backend/app/main.py
+Use a Python version compatible with the pinned dependencies. Dependency installation should be tested on the target machine before using this procedure as a production deployment guide.
 
-# Validate JS syntax before reloading the frontend
+### 3. Configure supporting services
+
+Before launching the application:
+
+- Start OpenSearch and confirm that it is reachable at `http://localhost:9200`.
+- Configure and start Zeek and Suricata if live sensor data is required.
+- Configure the collectors and scheduled feature/detection jobs.
+- Create the local monitoring configuration expected by the backend.
+- Confirm that the required OpenSearch indices and knowledge-retrieval assets are available.
+
+The included `docker-compose.yml` configures OpenSearch with its security plugin disabled for development. Do not expose that configuration directly to an untrusted network. A public deployment needs an appropriately secured search service, access controls, network restrictions, and deployment-specific configuration.
+
+### 4. Start FastAPI
+
+From the repository root:
+
+```bash
+source .venv/bin/activate
+python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
+```
+
+Open `http://127.0.0.1:8000` in a browser on the same machine.
+
+For access from another machine, configure a protected deployment and network access deliberately rather than exposing a development instance by default.
+
+### 5. Check application status
+
+Open these endpoints in a browser:
+
+- `http://127.0.0.1:8000/api/status`
+- `http://127.0.0.1:8000/api/health`
+
+The health endpoint checks the connection to OpenSearch. A healthy API response does not, by itself, prove that all sensors, collectors, scheduled jobs, or data sources are working.
+
+## Existing development service operations
+
+The development machine uses systemd for several services. These names apply only if the corresponding service units have been installed:
+
+```bash
+sudo systemctl status \
+  anomalystrike-backend \
+  anomalystrike-zeek \
+  anomalystrike-zeek-collector \
+  anomalystrike-zeek-dns-collector \
+  anomalystrike-suricata-collector \
+  --no-pager
+```
+
+To inspect scheduled jobs and application logs:
+
+```bash
+crontab -l
+tail -n 50 logs/features.log
+tail -n 50 logs/detection.log
+```
+
+Use the service manager to control managed processes. Avoid starting duplicate sensor or collector processes manually alongside services already managed by systemd or cron.
+
+## Development checks
+
+From the repository root:
+
+```bash
+source .venv/bin/activate
+python -m py_compile backend/app/main.py
 node --check backend/app/static/renderer.js
 ```
+
+These commands check Python syntax and JavaScript syntax; they do not test the full monitoring pipeline.
+
+## Known limitations
+
+- **DNS data:** The DNS collector currently reads a static test file rather than the live Zeek DNS log. The DNS page must not be presented as live DNS monitoring until this is corrected and verified.
+- **Suricata ingestion:** The collector may not backfill alerts generated during a crash or restart window.
+- **Knowledge coverage:** The retrieval knowledge base is small. Search results are supporting context, not proof that a security event is malicious.
+- **Detection validation:** Anomaly scores and flags need evaluation against repeatable benign and suspicious traffic scenarios. An anomaly is not automatically a confirmed attack.
+- **Deployment portability:** The current backend includes a machine-specific monitoring configuration path.
+- **Operational readiness:** The prototype requires further validation of installation, service recovery, access controls, and sustained operation before production use.
+- **Automated response:** Do not assume that blocking, quarantine, or other automated enforcement is implemented unless it is demonstrated and documented in the submitted version.
+
+## Team contributions
+
+Replace the placeholders before submission. Describe the work each person actually completed.
+
+- **[Team member 1 — full name]:** [Specific contribution to implementation, testing, research, design, or documentation.]
+- **[Team member 2 — full name]:** [Specific contribution.]
+- **[Team member 3 — full name]:** [Specific contribution.]
+
+Add or remove entries to match the actual team.
+
+## AI tools and external resources
+
+Complete this section accurately before submission. List the AI tools used during development and explain briefly how they supported the work. Also acknowledge significant external libraries, frameworks, and references where appropriate. Do not claim a tool was used unless it was.
+
+## Next three months
+
+Our next priority is to make AnomalySpike easier to install and evaluate, validate its detection pipeline against repeatable benign and suspicious traffic scenarios, and improve the analyst investigation workflow. We plan to document model limitations and test results, strengthen deployment and security guidance, and explore safe, human-approved response integration. The goal is a reproducible prototype that small IT and security teams can evaluate, rather than adding features without validation.
+
+## Project information
+
+- **Programme:** Thirduni
+- **Project:** AnomalySpike
+- **Repository:** https://github.com/TakieddineLom/AnomalyStrike
+- **Status:** Research and development prototype

@@ -6,8 +6,8 @@ from opensearchpy import OpenSearch
 
 OPENSEARCH_HOST = "localhost"
 OPENSEARCH_PORT = 9200
-EVENTS_INDEX = "anomalystrike-events"
-CORRELATED_INDEX = "anomalystrike-correlated"
+EVENTS_INDEX = "anomalyspike-events"
+CORRELATED_INDEX = "anomalyspike-correlated"
 
 
 client = OpenSearch(
@@ -94,7 +94,7 @@ def correlate_events(events):
             ).isoformat(),
 
             "event": {
-                "source": "anomalystrike",
+                "source": "anomalyspike",
                 "type": "correlation"
             },
 
@@ -102,7 +102,7 @@ def correlate_events(events):
                 "ip": source_ip
             },
 
-            "anomalystrike": {
+            "anomalyspike": {
                 "sensor": "sensor-01",
                 "pipeline": "correlation"
             },

@@ -15,9 +15,9 @@ from backend.app.detection.baseline import (
 OPENSEARCH_HOST = os.getenv("OPENSEARCH_HOST", "localhost")
 OPENSEARCH_PORT = int(os.getenv("OPENSEARCH_PORT", "9200"))
 
-FEATURES_INDEX = "anomalystrike-features"
-ANOMALIES_INDEX = "anomalystrike-anomalies"
-STATE_INDEX = "anomalystrike-state"
+FEATURES_INDEX = "anomalyspike-features"
+ANOMALIES_INDEX = "anomalyspike-anomalies"
+STATE_INDEX = "anomalyspike-state"
 STATE_ID = "hybrid-detection"
 
 MODEL_PATH = "backend/app/models/isolation_forest.pkl"
@@ -410,7 +410,7 @@ def create_result(
         ),
 
         "event": {
-            "source": "anomalystrike",
+            "source": "anomalyspike",
             "type": "anomaly_detection",
         },
 
@@ -455,7 +455,7 @@ def create_result(
                 behavioral["evidence"],
         },
 
-        "anomalystrike": {
+        "anomalyspike": {
             "sensor": "sensor-01",
             "pipeline": "temporal-hybrid-detection",
         },

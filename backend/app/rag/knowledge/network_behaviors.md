@@ -76,9 +76,9 @@ Large amounts of transferred data may result from:
 Data volume should be interpreted together with the destination,
 protocol, timing, and host behavior.
 
-## AnomalyStrike Context
+## AnomalySpike Context
 
-AnomalyStrike can combine behavioral evidence with:
+AnomalySpike can combine behavioral evidence with:
 
 - Zeek telemetry
 - Suricata alerts

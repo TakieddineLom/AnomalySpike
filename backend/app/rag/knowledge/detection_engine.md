@@ -1,8 +1,8 @@
-# AnomalyStrike Hybrid Detection Engine
+# AnomalySpike Hybrid Detection Engine
 
 ## Overview
 
-AnomalyStrike scores host behavior every minute using two independent
+AnomalySpike scores host behavior every minute using two independent
 detectors: a behavioral baseline detector and a machine learning
 (Isolation Forest) model. Their outputs are combined into a single
 hybrid result.

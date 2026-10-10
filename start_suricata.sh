@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-CONFIG="/home/taki/AnomalyStrike/config/monitoring.json"
+CONFIG="/home/taki/AnomalySpike/config/monitoring.json"
 
 INTERFACE=$(python3 -c '
 import json

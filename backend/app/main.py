@@ -13,12 +13,12 @@ from backend.app.rag.search import search as search_knowledge
 MONITORING_INTERFACE = None
 
 MONITORING_CONFIG = Path(
-    "/home/taki/AnomalyStrike/config/monitoring.json"
+    "/home/taki/AnomalySpike/config/monitoring.json"
 )
 
 
 app = FastAPI(
-    title="AnomalyStrike API",
+    title="AnomalySpike API",
     version="0.2.0",
     description="Network security monitoring and anomaly detection platform",
 )
@@ -32,44 +32,44 @@ opensearch = OpenSearch(
     ]
 )
 
-app.mount("/static", StaticFiles(directory="backend/app/static"), name="static")
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
 @app.get("/")
 def root_redirect():
-    return FileResponse("backend/app/static/dashboard.html")
+    return FileResponse("frontend/dashboard.html")
 
 @app.get("/dashboard")
 def serve_dashboard():
-    return FileResponse("backend/app/static/dashboard.html")
+    return FileResponse("frontend/dashboard.html")
 @app.get("/alerts")
 def serve_alerts():
-    return FileResponse("backend/app/static/alerts.html")
+    return FileResponse("frontend/alerts.html")
 
 @app.get("/connections")
 def serve_connections():
-    return FileResponse("backend/app/static/connections.html")
+    return FileResponse("frontend/connections.html")
 
 @app.get("/dns")
 def serve_dns():
-    return FileResponse("backend/app/static/dns.html")
+    return FileResponse("frontend/dns.html")
 
 @app.get("/threats")
 def serve_threats():
-    return FileResponse("backend/app/static/threats.html")
+    return FileResponse("frontend/threats.html")
 
 @app.get("/hosts")
 def serve_hosts():
-    return FileResponse("backend/app/static/hosts.html")
+    return FileResponse("frontend/hosts.html")
 
 @app.get("/settings")
 def serve_settings():
-    return FileResponse("backend/app/static/settings.html")
+    return FileResponse("frontend/settings.html")
 
 
 @app.get("/api/status")
 def root():
     return {
-        "name": "AnomalyStrike",
+        "name": "AnomalySpike",
         "version": "0.2.0",
         "status": "online",
     }
@@ -173,7 +173,7 @@ def get_events(size: int = 100, event_type: str = None):
         query = {"term": {"event.type": event_type}}
 
     response = opensearch.search(
-        index="anomalystrike-events",
+        index="anomalyspike-events",
 
    body={
             "size": size,
@@ -205,7 +205,7 @@ def get_events(size: int = 100, event_type: str = None):
 @app.get("/api/events/timeseries")
 def get_events_timeseries(hours: int = 24):
     response = opensearch.search(
-        index="anomalystrike-events",
+        index="anomalyspike-events",
         body={
             "size": 0,
             "query": {
@@ -245,7 +245,7 @@ def get_events_timeseries(hours: int = 24):
 @app.get("/api/anomalies")
 def get_anomalies(size: int = 100):
     response = opensearch.search(
-        index="anomalystrike-anomalies",
+        index="anomalyspike-anomalies",
         body={
             "size": size,
             "query": {
@@ -280,7 +280,7 @@ def get_anomalies(size: int = 100):
 @app.get("/api/hosts")
 def get_hosts(size: int = 100):
     response = opensearch.search(
-        index="anomalystrike-correlated",
+        index="anomalyspike-correlated",
         body={
             "size": size,
             "query": {
@@ -313,7 +313,7 @@ def get_hosts(size: int = 100):
 @app.get("/api/hosts/live")
 def get_live_hosts(hours: int = 24):
     response = opensearch.search(
-        index="anomalystrike-events",
+        index="anomalyspike-events",
         body={
             "size": 0,
             "query": {
@@ -371,7 +371,7 @@ def get_live_hosts(hours: int = 24):
 @app.get("/api/hosts/{ip}/timeline")
 def get_host_timeline(ip: str, size: int = 100):
     response = opensearch.search(
-        index="anomalystrike-events",
+        index="anomalyspike-events",
         body={
             "size": size,
             "query": {
@@ -408,11 +408,11 @@ def get_host_timeline(ip: str, size: int = 100):
 @app.get("/api/stats")
 def get_stats():
     events_count = opensearch.count(
-        index="anomalystrike-events"
+        index="anomalyspike-events"
     )["count"]
 
     anomalies_count = opensearch.count(
-    index="anomalystrike-anomalies",
+    index="anomalyspike-anomalies",
     body={
         "query": {
             "term": {
@@ -423,7 +423,7 @@ def get_stats():
 )["count"]
 
     hosts_response = opensearch.search(
-        index="anomalystrike-events",
+        index="anomalyspike-events",
         body={
             "size": 0,
             "aggs": {
@@ -448,7 +448,7 @@ def get_stats():
 @app.get("/api/alerts")
 def get_alerts(size: int = 100):
     response = opensearch.search(
-        index="anomalystrike-alerts",
+        index="anomalyspike-alerts",
         body={
             "size": size,
             "query": {

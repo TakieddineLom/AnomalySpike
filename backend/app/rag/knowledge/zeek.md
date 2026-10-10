@@ -5,7 +5,7 @@
 Zeek is a network security monitor that produces detailed network
 telemetry and protocol metadata.
 
-AnomalyStrike uses Zeek as a primary source of network activity evidence.
+AnomalySpike uses Zeek as a primary source of network activity evidence.
 
 ## Connection Events
 
@@ -42,9 +42,9 @@ Security analysis should consider:
 - Related Suricata alerts
 - Machine-learning anomaly results
 
-## AnomalyStrike Context
+## AnomalySpike Context
 
-AnomalyStrike uses Zeek connection data to provide network activity
+AnomalySpike uses Zeek connection data to provide network activity
 evidence during host investigations.
 
 Zeek telemetry can be correlated with Suricata alerts and anomaly

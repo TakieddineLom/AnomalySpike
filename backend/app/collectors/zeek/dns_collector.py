@@ -8,14 +8,14 @@ from opensearchpy import OpenSearch
 
 ZEEK_LOG = os.getenv(
     "ZEEK_DNS_LOG",
-    "/home/taki/AnomalyStrike/data/zeek/json-test/dns.log"
+    "/home/taki/AnomalySpike/data/zeek/json-test/dns.log"
 )
 
 OPENSEARCH_HOST = os.getenv("OPENSEARCH_HOST", "localhost")
 OPENSEARCH_PORT = int(os.getenv("OPENSEARCH_PORT", "9200"))
 OPENSEARCH_INDEX = os.getenv(
     "OPENSEARCH_INDEX",
-    "anomalystrike-events"
+    "anomalyspike-events"
 )
 
 
@@ -68,7 +68,7 @@ def normalize_event(event):
             "rejected": event.get("rejected")
         },
 
-        "anomalystrike": {
+        "anomalyspike": {
             "sensor": "sensor-01",
             "pipeline": "zeek-dns"
         }

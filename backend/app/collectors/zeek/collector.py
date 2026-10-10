@@ -8,14 +8,14 @@ from opensearchpy import OpenSearch
 
 ZEEK_LOG = os.getenv(
     "ZEEK_CONN_LOG",
-    "/home/taki/AnomalyStrike/conn.log"
+    "/home/taki/AnomalySpike/conn.log"
 )
 
 OPENSEARCH_HOST = os.getenv("OPENSEARCH_HOST", "localhost")
 OPENSEARCH_PORT = int(os.getenv("OPENSEARCH_PORT", "9200"))
 OPENSEARCH_INDEX = os.getenv(
     "OPENSEARCH_INDEX",
-    "anomalystrike-events"
+    "anomalyspike-events"
 )
 
 
@@ -73,7 +73,7 @@ def normalize_event(event):
             "missed_bytes": event.get("missed_bytes")
         },
 
-        "anomalystrike": {
+        "anomalyspike": {
             "sensor": "sensor-01",
             "pipeline": "zeek"
         }

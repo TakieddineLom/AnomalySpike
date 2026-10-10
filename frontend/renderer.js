@@ -1221,7 +1221,7 @@ function openAlertDetails(alert) {
                 <span>Sensor</span>
                 <strong>
                     ${escapeHtml(
-                        data.anomalystrike?.sensor || "—"
+                        data.anomalyspike?.sensor || "—"
                     )}
                 </strong>
             </div>
@@ -1230,7 +1230,7 @@ function openAlertDetails(alert) {
                 <span>Pipeline</span>
                 <strong>
                     ${escapeHtml(
-                        data.anomalystrike?.pipeline || "—"
+                        data.anomalyspike?.pipeline || "—"
                     )}
                 </strong>
             </div>

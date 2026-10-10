@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-cd /home/taki/AnomalyStrike
+cd /home/taki/AnomalySpike
 
 if pgrep -f "zeek -i" > /dev/null; then
     echo "Zeek is already running. Skipping start."
@@ -9,7 +9,7 @@ if pgrep -f "zeek -i" > /dev/null; then
 fi
 
 
-CONFIG="/home/taki/AnomalyStrike/config/monitoring.json"
+CONFIG="/home/taki/AnomalySpike/config/monitoring.json"
 
 INTERFACE=$(python3 -c '
 import json
@@ -21,4 +21,4 @@ echo "Starting Zeek on interface: $INTERFACE"
 
 exec sudo /opt/zeek/bin/zeek \
     -i "$INTERFACE" \
-    /home/taki/AnomalyStrike/config/zeek/anomalystrike.zeek
+    /home/taki/AnomalySpike/config/zeek/anomalyspike.zeek

@@ -24,9 +24,9 @@ client = OpenSearch(
 
 
 server = MCPServer(
-    name="AnomalyStrike",
+    name="AnomalySpike",
     version="0.1.0",
-    description="AnomalyStrike network security investigation server"
+    description="AnomalySpike network security investigation server"
 )
 
 
@@ -64,7 +64,7 @@ async def search_events(
     query = {"bool": {"filter": filters}} if filters else {"match_all": {}}
 
     response = client.search(
-        index="anomalystrike-events",
+        index="anomalyspike-events",
         body={
             "size": size,
             "query": query,
@@ -89,7 +89,7 @@ async def get_anomalies(
     query = {"bool": {"filter": filters}}
 
     response = client.search(
-        index="anomalystrike-anomalies",
+        index="anomalyspike-anomalies",
         body={
             "size": size,
             "query": query,
@@ -102,7 +102,7 @@ async def get_anomalies(
 
 async def get_host_profile(source_ip: str):
     response = client.search(
-        index="anomalystrike-correlated",
+        index="anomalyspike-correlated",
         body={
             "size": 1,
             "query": {"term": {"source.ip": source_ip}},
@@ -126,7 +126,7 @@ async def get_host_timeline(
     size = min(size, 100)
 
     response = client.search(
-        index="anomalystrike-events",
+        index="anomalyspike-events",
         body={
             "size": size,
             "query": {"term": {"source.ip": source_ip}},
@@ -471,19 +471,19 @@ async def search_knowledge(
 server.add_tool(
     search_knowledge,
     name="search_knowledge",
-    description="Search the AnomalyStrike security knowledge base using semantic similarity.",
+    description="Search the AnomalySpike security knowledge base using semantic similarity.",
 )
 
 server.add_tool(
     search_events,
     name="search_events",
-    description="Search normalized AnomalyStrike network events.",
+    description="Search normalized AnomalySpike network events.",
 )
 
 server.add_tool(
     get_anomalies,
     name="get_anomalies",
-    description="Retrieve detected AnomalyStrike anomalies.",
+    description="Retrieve detected AnomalySpike anomalies.",
 )
 
 server.add_tool(
@@ -507,7 +507,7 @@ server.add_tool(
 
 async def main():
     print(
-        "[MCP] AnomalyStrike MCP server starting on http://0.0.0.0:8765/mcp ...",
+        "[MCP] AnomalySpike MCP server starting on http://0.0.0.0:8765/mcp ...",
         file=__import__("sys").stderr,
     )
 

@@ -9,7 +9,7 @@ from pyod.models.iforest import IForest
 OPENSEARCH_HOST = os.getenv("OPENSEARCH_HOST", "localhost")
 OPENSEARCH_PORT = int(os.getenv("OPENSEARCH_PORT", "9200"))
 
-FEATURES_INDEX = "anomalystrike-features"
+FEATURES_INDEX = "anomalyspike-features"
 MODEL_PATH = "backend/app/models/isolation_forest.pkl"
 
 FEATURE_NAMES = [

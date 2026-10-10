@@ -5,7 +5,7 @@
 Suricata is a network threat detection engine capable of intrusion detection,
 intrusion prevention, network security monitoring, and protocol analysis.
 
-AnomalyStrike uses Suricata alerts as one source of security evidence.
+AnomalySpike uses Suricata alerts as one source of security evidence.
 
 ## Suricata Alerts
 
@@ -36,9 +36,9 @@ The alert should be evaluated together with:
 - Related network events
 - Host behavior over time
 
-## AnomalyStrike Context
+## AnomalySpike Context
 
-AnomalyStrike can correlate Suricata alerts with Zeek network events and
+AnomalySpike can correlate Suricata alerts with Zeek network events and
 machine-learning anomaly detection results.
 
 This allows an investigation to combine signature-based detection with

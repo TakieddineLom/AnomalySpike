@@ -2,7 +2,7 @@ services:
 
   opensearch:
     image: opensearchproject/opensearch:2.19.1
-    container_name: anomalystrike-opensearch
+    container_name: anomalyspike-opensearch
     environment:
       - discovery.type=single-node
       - bootstrap.memory_lock=true
@@ -19,11 +19,11 @@ services:
       - "9200:9200"
       - "9600:9600"
     networks:
-      - anomalystrike
+      - anomalyspike
 
   opensearch-dashboards:
     image: opensearchproject/opensearch-dashboards:2.19.1
-    container_name: anomalystrike-dashboard
+    container_name: anomalyspike-dashboard
     environment:
       - 'OPENSEARCH_HOSTS=["http://opensearch:9200"]'
       - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true
@@ -32,11 +32,13 @@ services:
     depends_on:
       - opensearch
     networks:
-      - anomalystrike
+      - anomalyspike
 
 volumes:
   opensearch-data:
+    external: true
+    name: anomalystrike_opensearch-data
 
 networks:
-  anomalystrike:
+  anomalyspike:
     driver: bridge

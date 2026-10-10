@@ -89,7 +89,7 @@ The current development deployment uses Ubuntu, Python, Docker with Docker Compo
 
 Python dependencies are pinned in `backend/requirements.txt`.
 
-The repository's current deployment configuration is tailored to the development environment. In particular, the backend uses a fixed configuration path under `/home/taki/AnomalyStrike`. A fresh installation on another machine will require configuration changes and validation.
+The repository's current deployment configuration is tailored to the development environment. In particular, the backend uses a fixed configuration path under `/home/taki/AnomalySpike`. A fresh installation on another machine will require configuration changes and validation.
 
 ## Running the web application
 
@@ -98,8 +98,8 @@ These steps start the API and web console after the required services and config
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/TakieddineLom/AnomalyStrike.git
-cd AnomalyStrike
+git clone https://github.com/TakieddineLom/AnomalySpike.git
+cd AnomalySpike
 ```
 
 ### 2. Create a Python environment
@@ -178,7 +178,7 @@ From the repository root:
 ```bash
 source .venv/bin/activate
 python -m py_compile backend/app/main.py
-node --check backend/app/static/renderer.js
+node --check frontend/renderer.js
 ```
 
 These commands check Python syntax and JavaScript syntax; they do not test the full monitoring pipeline.
@@ -215,5 +215,5 @@ Our next priority is to make AnomalySpike easier to install and evaluate, valida
 
 - **Programme:** Thirduni
 - **Project:** AnomalySpike
-- **Repository:** https://github.com/TakieddineLom/AnomalyStrike
+- **Repository:** https://github.com/TakieddineLom/AnomalySpike
 - **Status:** Research and development prototype

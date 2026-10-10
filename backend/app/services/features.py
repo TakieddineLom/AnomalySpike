@@ -8,9 +8,9 @@ from opensearchpy import OpenSearch
 OPENSEARCH_HOST = os.getenv("OPENSEARCH_HOST", "localhost")
 OPENSEARCH_PORT = int(os.getenv("OPENSEARCH_PORT", "9200"))
 
-EVENTS_INDEX = "anomalystrike-events"
-FEATURES_INDEX = "anomalystrike-features"
-STATE_INDEX = "anomalystrike-state"
+EVENTS_INDEX = "anomalyspike-events"
+FEATURES_INDEX = "anomalyspike-features"
+STATE_INDEX = "anomalyspike-state"
 STATE_ID = "feature-extraction"
 
 VERSION = "0.4.0"
@@ -152,7 +152,7 @@ def build_feature_window(events, source_ip, minute):
     return {
         "@timestamp": minute.isoformat(),
         "event": {
-            "source": "anomalystrike",
+            "source": "anomalyspike",
             "type": "behavior_features"
         },
         "source": {
@@ -166,7 +166,7 @@ def build_feature_window(events, source_ip, minute):
             "bytes_received": bytes_received,
             "failed_connection_count": failed_connections
         },
-        "anomalystrike": {
+        "anomalyspike": {
             "sensor": "sensor-01",
             "pipeline": "feature-extraction",
             "version": VERSION

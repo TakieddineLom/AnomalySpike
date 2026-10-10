@@ -15,7 +15,7 @@ OPENSEARCH_HOST = os.getenv(
     "http://127.0.0.1:9200",
 )
 
-INDEX_NAME = "anomalystrike-alerts"
+INDEX_NAME = "anomalyspike-alerts"
 
 POLL_INTERVAL = 1.0
 
@@ -68,7 +68,7 @@ def ensure_index():
                         "protocol": {"type": "keyword"},
                     }
                 },
-                "anomalystrike": {
+                "anomalyspike": {
                     "properties": {
                         "sensor": {"type": "keyword"},
                         "pipeline": {"type": "keyword"},
@@ -127,7 +127,7 @@ def transform_alert(event):
             "protocol": event.get("proto"),
         },
 
-        "anomalystrike": {
+        "anomalyspike": {
             "sensor": "sensor-01",
             "pipeline": "suricata-alert-collector",
         },

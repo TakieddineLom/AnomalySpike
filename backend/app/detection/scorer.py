@@ -20,9 +20,9 @@ OPENSEARCH_PORT = int(
     )
 )
 
-FEATURES_INDEX = "anomalystrike-features"
-ANOMALIES_INDEX = "anomalystrike-anomalies"
-STATE_INDEX = "anomalystrike-state"
+FEATURES_INDEX = "anomalyspike-features"
+ANOMALIES_INDEX = "anomalyspike-anomalies"
+STATE_INDEX = "anomalyspike-state"
 STATE_ID = "ml-scoring"
 
 
@@ -198,7 +198,7 @@ def store_result(
         "@timestamp": data["@timestamp"],
 
         "event": {
-            "source": "anomalystrike",
+            "source": "anomalyspike",
             "type": "anomaly_detection"
         },
 
@@ -221,7 +221,7 @@ def store_result(
             "version": model_version
         },
 
-        "anomalystrike": {
+        "anomalyspike": {
 
             "sensor": "sensor-01",
 

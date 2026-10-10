@@ -5,7 +5,7 @@
 MITRE ATT&CK is a knowledge base that describes adversary tactics,
 techniques, and procedures observed in real-world cyber operations.
 
-AnomalyStrike can use ATT&CK concepts to provide security context for
+AnomalySpike can use ATT&CK concepts to provide security context for
 observed network behaviors.
 
 ## Tactics
@@ -39,9 +39,9 @@ without sufficient evidence.
 ATT&CK mappings should therefore be treated as contextual hypotheses
 supported by observed evidence.
 
-## AnomalyStrike Context
+## AnomalySpike Context
 
-AnomalyStrike can combine:
+AnomalySpike can combine:
 
 - Zeek network telemetry
 - Suricata alerts

@@ -1,6 +1,24 @@
-<nav class="sidebar">
+<nav class="sidebar" aria-label="Main navigation">
+    <div class="sidebar-brand" aria-label="AnomalySpike">
+        <div class="sidebar-brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 27 17 5 29 18 35 18 48 5 56 29 52 45 40 56 25 56 12 44Z" fill="#A6FF83"/>
+                <path d="M17 12 22 25 13 32Z" fill="#0B0F14"/>
+                <path d="M48 12 43 25 52 32Z" fill="#0B0F14"/>
+                <path d="M20 31 29 27 27 36 20 39Z" fill="#0B0F14"/>
+                <path d="M44 31 35 27 37 36 44 39Z" fill="#0B0F14"/>
+                <path d="M29 40 32 37 35 40 32 45Z" fill="#18C8FF"/>
+                <path d="M26 48 32 51 38 48" stroke="#0B0F14" stroke-width="2.5" stroke-linecap="round"/>
+                <circle cx="40" cy="32" r="2.5" fill="#18C8FF"/>
+            </svg>
+        </div>
+        <div>
+            <div class="sidebar-brand-name">ANOMALY<span>SPIKE</span></div>
+            <div class="sidebar-brand-caption">Network Defense</div>
+        </div>
+    </div>
     <div class="sidebar-search">
-        <input type="text" placeholder="Search" />
+        <input type="text" placeholder="Search" aria-label="Search navigation" />
     </div>
     <ul class="sidebar-nav">
         <li><a href="/dashboard" data-page="dashboard">Dashboard</a></li>
@@ -9,6 +27,6 @@
         <li><a href="/dns" data-page="dns">DNS Analysis</a></li>
         <li><a href="/threats" data-page="threats">Threat Detection</a></li>
         <li><a href="/hosts" data-page="hosts">Connected Hosts</a></li>
-	<li><a href="/settings" data-page="settings">Settings</a></li>
+        <li><a href="/settings" data-page="settings">Settings</a></li>
     </ul>
 </nav>

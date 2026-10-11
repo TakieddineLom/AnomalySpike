@@ -164,122 +164,118 @@
 <script>
     loadSidebar("dashboard");
 
+    let eventsChart = null;
+    let chartRefreshInProgress = false;
+
     function updateLastUpdated() {
         const element = document.getElementById("last-updated");
         if (!element) return;
-
         element.textContent = new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit"
+            hour: "2-digit", minute: "2-digit", second: "2-digit"
         });
     }
 
+    function showChartMessage(message) {
+        const container = document.querySelector(".chart-container");
+        if (!container) return;
+        let notice = document.getElementById("chart-status-message");
+        if (!notice) {
+            notice = document.createElement("div");
+            notice.id = "chart-status-message";
+            notice.className = "loading";
+            notice.style.padding = "12px 0";
+            container.appendChild(notice);
+        }
+        notice.textContent = message;
+        notice.hidden = !message;
+    }
+
     async function loadEventsChart() {
+        if (chartRefreshInProgress) return;
+        chartRefreshInProgress = true;
         try {
-            const response = await fetch("/api/events/timeseries?hours=24");
-            const result = await response.json();
-
-            const labels = result.points.map(point => {
-                const date = new Date(point.timestamp);
-
-                return date.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit"
-                });
+            const response = await fetch("/api/events/timeseries?hours=24", {
+                headers: { "Accept": "application/json" },
+                cache: "no-store"
             });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const result = await response.json();
+            if (!result || !Array.isArray(result.points)) {
+                throw new Error("Unexpected time-series response");
+            }
 
-            const values = result.points.map(point => point.count);
+            const points = result.points;
+            const labels = points.map(point => {
+                const date = new Date(point.timestamp);
+                return Number.isNaN(date.getTime()) ? String(point.timestamp ?? "—") :
+                    date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+            });
+            const values = points.map(point => Number(point.count) || 0);
+            const canvas = document.getElementById("events-chart");
+            if (!canvas || typeof Chart === "undefined") {
+                throw new Error("Chart.js is unavailable");
+            }
 
-            const ctx = document.getElementById("events-chart");
-
-            new Chart(ctx, {
-                type: "line",
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: "Network Events",
-                        data: values,
-                        tension: 0.3,
-                        fill: true,
-                        borderWidth: 2,
-                        pointRadius: 2,
-                        pointHoverRadius: 5
-                    }]
-                },
-
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-
-                    interaction: {
-                        intersect: false,
-                        mode: "index"
-                    },
-
-                    plugins: {
-                        legend: {
-                            display: false
+            if (eventsChart) {
+                eventsChart.data.labels = labels;
+                eventsChart.data.datasets[0].data = values;
+                eventsChart.update("none");
+            } else {
+                const ctx = canvas.getContext("2d");
+                const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+                gradient.addColorStop(0, "rgba(166, 255, 131, 0.24)");
+                gradient.addColorStop(1, "rgba(166, 255, 131, 0.01)");
+                eventsChart = new Chart(ctx, {
+                    type: "line",
+                    data: { labels, datasets: [{
+                        label: "Network Events", data: values,
+                        borderColor: "#A6FF83", backgroundColor: gradient,
+                        tension: 0.32, fill: true, borderWidth: 2,
+                        pointRadius: 1.5, pointHoverRadius: 5,
+                        pointBackgroundColor: "#18C8FF"
+                    }] },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        animation: false,
+                        interaction: { intersect: false, mode: "index" },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { callbacks: { label: c => ` ${c.parsed.y.toLocaleString()} events` } }
                         },
-
-                        tooltip: {
-                            callbacks: {
-                                title: function(context) {
-                                    return context[0].label;
-                                },
-
-                                label: function(context) {
-                                    return ` ${context.parsed.y.toLocaleString()} events`;
-                                }
-                            }
-                        }
-                    },
-
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-
-                            grid: {
-                                drawBorder: false
-                            },
-
-                            ticks: {
-                                callback: function(value) {
-                                    return value.toLocaleString();
-                                }
-                            },
-
-                            title: {
-                                display: true,
-                                text: "Events"
-                            }
-                        },
-
-                        x: {
-                            grid: {
-                                display: false
-                            },
-
-                            title: {
-                                display: true,
-                                text: "Time"
-                            }
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: "rgba(139,154,168,0.12)" },
+                                ticks: { color: "#8B9AA8", callback: value => Number(value).toLocaleString() },
+                                title: { display: true, text: "Events", color: "#8B9AA8" } },
+                            x: { grid: { display: false }, ticks: { color: "#8B9AA8", maxTicksLimit: 8 },
+                                title: { display: true, text: "Time", color: "#8B9AA8" } }
                         }
                     }
-                }
-            });
-
+                });
+            }
+            showChartMessage("");
+            updateLastUpdated();
         } catch (error) {
             console.error("Failed to load events chart:", error);
+            showChartMessage("Unable to load network activity. Check the API connection and try refreshing.");
+        } finally {
+            chartRefreshInProgress = false;
         }
     }
 
-    updateLastUpdated();
-    loadEventsChart();
+    const refreshButton = document.getElementById("refresh-btn");
+    if (refreshButton) {
+        refreshButton.addEventListener("click", async () => {
+            await loadEventsChart();
+            if (typeof loadDashboard === "function") await loadDashboard();
+        });
+    }
 
-    setInterval(() => {
-        location.reload();
-    }, 60000);
+    const networkSelector = document.getElementById("network-selector");
+    if (networkSelector) networkSelector.addEventListener("change", loadEventsChart);
+
+    loadEventsChart();
+    // Refresh the chart in place; do not reload the entire page or interrupt investigations.
+    setInterval(loadEventsChart, 30000);
 </script>
 
 </body>

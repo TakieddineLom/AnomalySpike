@@ -7,11 +7,10 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-
 <header class="topbar">
     <div>
-        <h1>ANOMALYSPIKE</h1>
-        <p>AI-Assisted Network Security Monitoring</p>
+        <div class="logo">ANOMALY<span>SPIKE</span></div>
+        <div class="subtitle">AI-Assisted Network Security Monitoring</div>
     </div>
     <div class="api-status">
         <span class="status-dot"></span>
@@ -21,29 +20,32 @@
 
 <div class="app-shell">
     <div id="sidebar-placeholder"></div>
-
     <main class="page-content">
-
         <section class="page-header">
             <div>
                 <h2>Connected Hosts</h2>
                 <p>Hosts observed on the network in the last 24 hours</p>
             </div>
+            <button class="btn btn-primary" id="refresh-hosts" type="button">Refresh</button>
         </section>
 
         <section class="panel">
             <div class="panel-header">
                 <div>
-                    <h2>Active Hosts</h2>
-                    <p>Based on live Zeek connection data</p>
+                    <h2>Host Activity Overview</h2>
+                    <p>Activity indicator compares connection volume and destination diversity across the currently returned hosts. It is not a verdict that a host is malicious.</p>
                 </div>
             </div>
-
+            <div class="form-row" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:0 18px 16px;">
+                <input id="host-search" type="search" placeholder="Search host IP…" aria-label="Search hosts" style="min-width:220px;flex:1;">
+                <span id="host-summary" class="muted" aria-live="polite">Loading hosts…</span>
+            </div>
             <div class="table-container">
                 <table>
                     <thead>
                         <tr>
                             <th>Host IP</th>
+                            <th>Activity Indicator</th>
                             <th>Connections</th>
                             <th>Unique Destinations</th>
                             <th>First Seen</th>
@@ -51,61 +53,129 @@
                         </tr>
                     </thead>
                     <tbody id="hosts-table">
-                        <tr><td colspan="5">Loading hosts...</td></tr>
+                        <tr><td colspan="6">Loading hosts...</td></tr>
                     </tbody>
                 </table>
             </div>
+            <p style="padding:12px 18px;color:var(--text-secondary,#8B9AA8);font-size:0.85rem;">
+                Indicator is a relative heuristic derived only from connection count and unique destinations in this response. It does not use IDS alerts, anomaly-model output, asset criticality, or historical baselines.
+            </p>
         </section>
-
     </main>
 </div>
 
 <script src="/static/shared.js"></script>
-
 <script>
     loadSidebar("hosts");
 
+    const hostsTable = document.getElementById("hosts-table");
+    const hostSearch = document.getElementById("host-search");
+    const hostSummary = document.getElementById("host-summary");
+    const refreshButton = document.getElementById("refresh-hosts");
+    let currentHosts = [];
+
+    function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>"']/g, char => ({
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        }[char]));
+    }
+
+    function numeric(value) {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+    }
+
+    function getActivityScores(hosts) {
+        const connectionValues = hosts.map(host => Math.log1p(numeric(host.connection_count)));
+        const destinationValues = hosts.map(host => Math.log1p(numeric(host.unique_destinations)));
+        const maxConnections = Math.max(1, ...connectionValues);
+        const maxDestinations = Math.max(1, ...destinationValues);
+
+        return hosts.map((host, index) => {
+            // Relative activity indicator only; it is not a security risk probability.
+            const connectionComponent = connectionValues[index] / maxConnections;
+            const destinationComponent = destinationValues[index] / maxDestinations;
+            return Math.round(100 * (0.6 * connectionComponent + 0.4 * destinationComponent));
+        });
+    }
+
+    function activityLabel(score) {
+        if (score >= 75) return { label: "High activity", color: "#FFB454" };
+        if (score >= 40) return { label: "Moderate", color: "#18C8FF" };
+        return { label: "Lower activity", color: "#A6FF83" };
+    }
+
+    function renderHosts() {
+        const query = hostSearch.value.trim().toLowerCase();
+        const filtered = currentHosts.filter(host => String(host.ip ?? "").toLowerCase().includes(query));
+        const scores = getActivityScores(currentHosts);
+        const scoreByIndex = new Map(currentHosts.map((host, index) => [host, scores[index]]));
+
+        if (!filtered.length) {
+            hostsTable.innerHTML = `<tr><td colspan="6">${currentHosts.length ? "No hosts match your search." : "No hosts found."}</td></tr>`;
+            hostSummary.textContent = currentHosts.length ? "0 matching hosts" : "0 hosts";
+            return;
+        }
+
+        hostsTable.innerHTML = filtered.map(host => {
+            const score = scoreByIndex.get(host) ?? 0;
+            const activity = activityLabel(score);
+            const firstSeen = host.first_seen ? new Date(host.first_seen).toLocaleString() : "—";
+            const lastSeen = host.last_seen ? new Date(host.last_seen).toLocaleString() : "—";
+            const connections = numeric(host.connection_count);
+            const destinations = numeric(host.unique_destinations);
+
+            return `<tr>
+                <td>${escapeHtml(host.ip || "Unknown")}</td>
+                <td>
+                    <div style="display:flex;align-items:center;gap:8px;min-width:150px;">
+                        <span style="font-weight:700;color:${activity.color};">${score}/100</span>
+                        <span style="font-size:0.8rem;color:${activity.color};">${activity.label}</span>
+                    </div>
+                    <div style="height:4px;background:var(--border-color,#26323D);border-radius:8px;overflow:hidden;margin-top:6px;max-width:180px;">
+                        <div style="height:100%;width:${score}%;background:${activity.color};"></div>
+                    </div>
+                </td>
+                <td>${connections.toLocaleString()}</td>
+                <td>${destinations.toLocaleString()}</td>
+                <td>${escapeHtml(firstSeen)}</td>
+                <td>${escapeHtml(lastSeen)}</td>
+            </tr>`;
+        }).join("");
+
+        hostSummary.textContent = `${filtered.length} of ${currentHosts.length} hosts`;
+    }
+
     async function loadHosts() {
+        refreshButton.disabled = true;
+        refreshButton.textContent = "Refreshing…";
+        hostSummary.textContent = "Loading hosts…";
+
         try {
-            const response = await fetch("/api/hosts/live");
+            const response = await fetch("/api/hosts/live", { headers: { "Accept": "application/json" } });
+            if (!response.ok) throw new Error(`API returned HTTP ${response.status}`);
             const result = await response.json();
 
-            const table = document.getElementById("hosts-table");
-
-            if (!result.hosts || result.hosts.length === 0) {
-                table.innerHTML = `<tr><td colspan="5">No hosts found.</td></tr>`;
-                return;
+            if (!result || (result.hosts != null && !Array.isArray(result.hosts))) {
+                throw new Error("Unexpected host API response format");
             }
 
-            table.innerHTML = result.hosts.map(host => {
-                const firstSeen = host.first_seen
-                    ? new Date(host.first_seen).toLocaleString()
-                    : "—";
-
-                const lastSeen = host.last_seen
-                    ? new Date(host.last_seen).toLocaleString()
-                    : "—";
-
-                return `
-                    <tr>
-                        <td>${host.ip}</td>
-                        <td>${host.connection_count.toLocaleString()}</td>
-                        <td>${host.unique_destinations}</td>
-                        <td>${firstSeen}</td>
-                        <td>${lastSeen}</td>
-                    </tr>
-                `;
-            }).join("");
-
+            currentHosts = Array.isArray(result.hosts) ? result.hosts : [];
+            renderHosts();
         } catch (error) {
             console.error("Failed to load hosts:", error);
-            document.getElementById("hosts-table").innerHTML =
-                `<tr><td colspan="5">Failed to load hosts.</td></tr>`;
+            hostsTable.innerHTML = `<tr><td colspan="6">Unable to load hosts. Check the API connection and try again.</td></tr>`;
+            hostSummary.textContent = "Host data unavailable";
+        } finally {
+            refreshButton.disabled = false;
+            refreshButton.textContent = "Refresh";
         }
     }
 
+    hostSearch.addEventListener("input", renderHosts);
+    refreshButton.addEventListener("click", loadHosts);
     loadHosts();
+    setInterval(loadHosts, 30000);
 </script>
-
 </body>
 </html>

@@ -7,14 +7,19 @@
     <title>Settings - AnomalySpike</title>
 
     <link rel="stylesheet" href="/static/style.css">
+
+    <style>
+        .sensor-health-panel{margin-bottom:22px}.health-summary{padding:12px 14px;margin:0 0 14px;border:1px solid #26323d;border-radius:9px;background:#0b0f14;color:#8b9aa8}.health-summary.healthy{color:#a6ff83;border-color:rgba(166,255,131,.35)}.health-summary.unhealthy{color:#ff5d67;border-color:rgba(255,93,103,.35)}.health-details{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.health-item{min-width:0;padding:12px;background:#0b0f14;border:1px solid #26323d;border-radius:9px}.health-item span{display:block;color:#8b9aa8;font-size:12px;margin-bottom:7px;text-transform:capitalize}.health-item strong{display:block;color:#e6edf3;font-size:14px;overflow-wrap:anywhere}.health-item .health-ok{color:#a6ff83}.health-item .health-bad{color:#ff5d67}.health-item .health-neutral{color:#18c8ff}
+    </style>
+
 </head>
 
 <body>
 
 <header class="topbar">
     <div>
-        <h1>ANOMALYSPIKE</h1>
-        <p>AI-Assisted Network Security Monitoring</p>
+        <div class="logo">ANOMALY<span>SPIKE</span></div>
+        <div class="subtitle">AI-Assisted Network Security Monitoring</div>
     </div>
 
     <div class="api-status">
@@ -34,6 +39,19 @@
                 <h2>Settings</h2>
                 <p>Configure AnomalySpike monitoring and system options</p>
             </div>
+        </section>
+
+        <section class="panel sensor-health-panel" aria-labelledby="sensor-health-title">
+            <div class="panel-header">
+                <div>
+                    <h2 id="sensor-health-title">Sensor &amp; Service Health</h2>
+                    <p>Current status reported by the AnomalySpike health endpoint</p>
+                </div>
+                <button type="button" id="refresh-health" class="settings-button">Refresh status</button>
+            </div>
+            <div id="health-summary" class="health-summary" role="status" aria-live="polite">Checking service health…</div>
+            <div id="health-details" class="health-details"></div>
+            <p class="settings-description">Status is based on <code>/api/health</code>. Individual sensor status is shown only when the API reports it.</p>
         </section>
 
         <section class="panel">
@@ -158,6 +176,76 @@
     });
 
     loadInterfaces();
+
+    const healthSummary = document.getElementById("health-summary");
+    const healthDetails = document.getElementById("health-details");
+    const healthRefresh = document.getElementById("refresh-health");
+
+    function safeText(value) {
+        if (value === null || value === undefined || value === "") return "Not reported";
+        if (typeof value === "object") return JSON.stringify(value);
+        return String(value);
+    }
+
+    function healthState(value) {
+        const normalized = String(value ?? "").toLowerCase();
+        if (["healthy", "ok", "online", "running", "up", "connected", "true"].includes(normalized)) return "health-ok";
+        if (["unhealthy", "error", "offline", "down", "failed", "disconnected", "false"].includes(normalized)) return "health-bad";
+        return "health-neutral";
+    }
+
+    function renderHealth(data) {
+        const status = data && typeof data === "object" ? data.status : data;
+        const healthy = String(status ?? "").toLowerCase() === "healthy" || status === true;
+        healthSummary.className = `health-summary ${healthy ? "healthy" : (status ? "unhealthy" : "")}`;
+        healthSummary.textContent = status ? `API status: ${safeText(status)}` : "Health endpoint responded, but did not report an overall status.";
+        healthDetails.innerHTML = "";
+
+        if (!data || typeof data !== "object" || Array.isArray(data)) {
+            healthDetails.innerHTML = '<div class="health-item"><span>Health response</span><strong class="health-neutral">No detailed service information reported</strong></div>';
+            return;
+        }
+
+        const entries = Object.entries(data).filter(([key]) => key.toLowerCase() !== "status");
+        if (!entries.length) {
+            healthDetails.innerHTML = '<div class="health-item"><span>Service details</span><strong class="health-neutral">No component details reported by API</strong></div>';
+            return;
+        }
+
+        healthDetails.innerHTML = entries.map(([key, value]) => {
+            const display = safeText(value);
+            const stateClass = healthState(value);
+            return `<div class="health-item"><span>${escapeHealthHtml(key.replace(/[_-]+/g, " "))}</span><strong class="${stateClass}">${escapeHealthHtml(display)}</strong></div>`;
+        }).join("");
+    }
+
+    function escapeHealthHtml(value) {
+        return String(value).replace(/[&<>"']/g, char => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"}[char]));
+    }
+
+    async function loadHealth() {
+        healthRefresh.disabled = true;
+        healthRefresh.textContent = "Checking…";
+        healthSummary.className = "health-summary";
+        healthSummary.textContent = "Checking service health…";
+        try {
+            const response = await fetch("/api/health", { headers: { "Accept": "application/json" } });
+            if (!response.ok) throw new Error(`Health endpoint returned HTTP ${response.status}`);
+            renderHealth(await response.json());
+        } catch (error) {
+            console.error("Failed to load service health:", error);
+            healthSummary.className = "health-summary unhealthy";
+            healthSummary.textContent = "Unable to retrieve service health. Check the API connection.";
+            healthDetails.innerHTML = "";
+        } finally {
+            healthRefresh.disabled = false;
+            healthRefresh.textContent = "Refresh status";
+        }
+    }
+
+    healthRefresh.addEventListener("click", loadHealth);
+    loadHealth();
+    setInterval(loadHealth, 30000);
 </script>
 
 

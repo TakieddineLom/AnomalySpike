@@ -1,10 +1,28 @@
-# AnomalySpike
+<div align="center">
+  <img src="assets/anomalyspike-logo.png" alt="AnomalySpike fennec fox logo" width="420">
+  <h1>AnomalySpike</h1>
+  <p><strong>AI-assisted network security monitoring and anomaly investigation.</strong></p>
+  <p><a href="https://github.com/TakieddineLom/AnomalySpike">Repository</a> · Thirduni programme · Research and development prototype</p>
+</div>
 
-**AI-assisted network security monitoring and anomaly investigation in one web console.**
+---
 
 AnomalySpike is a team-built cybersecurity prototype developed during the Thirduni programme. It brings together network telemetry, intrusion-detection alerts, machine-learning-based anomaly detection, and retrieval-based security knowledge to help small IT and security teams investigate potentially suspicious network activity.
 
 > **Project status:** Prototype. Detection coverage, operational reliability, and performance require further evaluation. Some components use test data, as noted below.
+
+## Contents
+
+- [The problem](#the-problem)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Web console](#web-console)
+- [Technology stack](#technology-stack)
+- [Requirements and setup](#requirements)
+- [Development checks](#development-checks)
+- [Known limitations](#known-limitations)
+- [Team contributions](#team-contributions)
+- [Project information](#project-information)
 
 ## The problem
 
@@ -153,11 +171,11 @@ The development machine uses systemd for several services. These names apply onl
 
 ```bash
 sudo systemctl status \
-  anomalystrike-backend \
-  anomalystrike-zeek \
-  anomalystrike-zeek-collector \
-  anomalystrike-zeek-dns-collector \
-  anomalystrike-suricata-collector \
+  anomalyspike-backend \
+  anomalyspike-zeek \
+  anomalyspike-zeek-collector \
+  anomalyspike-zeek-dns-collector \
+  anomalyspike-suricata-collector \
   --no-pager
 ```
 

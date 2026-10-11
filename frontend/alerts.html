@@ -3,226 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Suricata Alerts - AnomalySpike</title>
-
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .alert-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 16px}
+        .alert-toolbar input,.alert-toolbar select{background:#0b0f14;color:#e6edf3;border:1px solid #26323d;border-radius:8px;padding:10px 12px;min-height:40px}
+        .alert-toolbar input{flex:1;min-width:220px}
+        .alert-toolbar button,.modal-action{background:#a6ff83;color:#0b0f14;border:0;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer}
+        .alert-toolbar button:disabled{opacity:.6;cursor:wait}
+        .alert-row{cursor:pointer;transition:background .15s ease}
+        .alert-row:hover,.alert-row:focus{background:rgba(166,255,131,.07);outline:1px solid rgba(166,255,131,.28);outline-offset:-1px}
+        .alert-row:focus{outline:2px solid #18c8ff;outline-offset:-2px}
+        .severity{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:700;background:#26323d;color:#e6edf3}
+        .severity-1{background:rgba(255,93,103,.16);color:#ff5d67}.severity-2{background:rgba(255,180,84,.15);color:#ffb454}.severity-3{background:rgba(24,200,255,.13);color:#18c8ff}.severity-4{background:rgba(166,255,131,.12);color:#a6ff83}
+        .alert-modal{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.72);padding:24px;overflow:auto}
+        .alert-modal.visible{display:flex;align-items:flex-start;justify-content:center}
+        .alert-modal-content{width:min(900px,100%);margin:auto;background:#151c24;border:1px solid #26323d;border-radius:14px;box-shadow:0 24px 80px rgba(0,0,0,.5);overflow:hidden}
+        .alert-modal-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;border-bottom:1px solid #26323d}
+        .alert-modal-header h2{margin:0;font-size:20px}.alert-modal-header button{background:transparent;color:#e6edf3;border:0;font-size:28px;cursor:pointer}
+        #alert-details{padding:22px}.detail-section-title{margin:22px 0 12px;color:#a6ff83;font-size:13px;text-transform:uppercase;letter-spacing:.08em}.detail-section-title:first-child{margin-top:0}
+        .detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.detail-item{min-width:0;background:#0b0f14;border:1px solid #26323d;border-radius:9px;padding:12px}.detail-item span{display:block;color:#8b9aa8;font-size:12px;margin-bottom:6px}.detail-item strong{display:block;color:#e6edf3;overflow-wrap:anywhere;font-size:14px;font-weight:600}
+        .alert-count{color:#8b9aa8;font-size:12px;margin-left:auto}.table-container tbody tr td{vertical-align:middle}
+        .empty-state{padding:24px!important;text-align:center;color:#8b9aa8}.alert-error{color:#ff5d67!important}
+        @media(max-width:640px){.alert-modal{padding:10px}.detail-grid{grid-template-columns:1fr}.alert-toolbar input{min-width:100%}.alert-modal-content{margin:auto 0}}
+    </style>
 </head>
-<div id="alert-modal" class="alert-modal">
+<body>
+<div id="alert-modal" class="alert-modal" role="dialog" aria-modal="true" aria-labelledby="alert-modal-title" aria-hidden="true">
     <div class="alert-modal-content">
-
         <div class="alert-modal-header">
-            <h2>Alert Details</h2>
-            <button onclick="closeAlertDetails()">×</button>
+            <h2 id="alert-modal-title">Alert Investigation</h2>
+            <button type="button" aria-label="Close alert details" onclick="closeAlertDetails()">×</button>
         </div>
-
         <div id="alert-details"></div>
-
     </div>
 </div>
-<body>
-
 <header class="topbar">
     <div>
-        <h1>ANOMALY<span>SPIKE</span></h1>
-        <p>AI-Assisted Network Security Monitoring</p>
-    </div>
-
-    <div class="api-status">
-        <span class="status-dot"></span>
-        API Connected
-    </div>
+        <div class="logo">ANOMALY<span>SPIKE</span></div>
+        <div class="subtitle">AI-Assisted Network Security Monitoring</div>
+</div>
+    <div class="api-status"><span class="status-dot" id="alerts-status-dot"></span><span id="alerts-status-text">Connecting…</span></div>
 </header>
 
+
+
 <div class="app-shell">
-
     <div id="sidebar-placeholder"></div>
-
     <main class="page-content">
-
         <section class="page-header">
-            <div>
-                <h2>Suricata Alerts</h2>
-                <p>Intrusion detection alerts collected from Suricata</p>
-            </div>
+            <div><h2>Suricata Alerts</h2><p>Investigate intrusion detection alerts and their network context</p></div>
         </section>
-
         <section class="panel">
             <div class="panel-header">
-                <div>
-                    <h2>Recent Alerts</h2>
-                    <p>Latest security alerts detected by Suricata</p>
-                </div>
+                <div><h2>Recent Alerts</h2><p>Choose an alert to inspect its evidence and network metadata</p></div>
+                <span class="alert-count" id="alert-count">Loading…</span>
             </div>
-
+            <div class="alert-toolbar" role="search">
+                <input id="alert-search" type="search" placeholder="Search signature, IP, category or protocol…" aria-label="Search alerts">
+                <select id="severity-filter" aria-label="Filter by severity">
+                    <option value="all">All severities</option><option value="1">Severity 1 · High</option><option value="2">Severity 2 · Medium</option><option value="3">Severity 3 · Low</option><option value="4">Severity 4 · Informational</option>
+                </select>
+                <button type="button" id="refresh-alerts">Refresh alerts</button>
+            </div>
             <div class="table-container">
                 <table>
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Signature</th>
-                            <th>Severity</th>
-                            <th>Source</th>
-                            <th>Destination</th>
-                        </tr>
-                    </thead>
-
-                    <tbody id="alerts-table">
-                        <tr>
-                            <td colspan="5">Loading alerts...</td>
-                        </tr>
-                    </tbody>
+                    <thead><tr><th>Time</th><th>Signature</th><th>Severity</th><th>Source</th><th>Destination</th></tr></thead>
+                    <tbody id="alerts-table"><tr><td class="empty-state" colspan="5">Loading alerts…</td></tr></tbody>
                 </table>
             </div>
         </section>
-
     </main>
-
 </div>
-
 <script src="/static/shared.js"></script>
-
 <script>
     loadSidebar("alerts");
+    const alertTable = document.getElementById("alerts-table");
+    const alertSearch = document.getElementById("alert-search");
+    const severityFilter = document.getElementById("severity-filter");
+    const refreshButton = document.getElementById("refresh-alerts");
+    let allAlerts = [];
+    let lastFocusedRow = null;
 
-
-    async function loadAlerts() {
-    try {
-        const response = await fetch("/api/alerts?size=100");
-        const result = await response.json();
-
-        const table = document.getElementById("alerts-table");
-
-        if (!result.alerts || result.alerts.length === 0) {
-            table.innerHTML = `
-                <tr>
-                    <td colspan="5">No Suricata alerts found.</td>
-                </tr>
-            `;
+    function escapeHtml(value) {
+        return String(value ?? "—").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#39;"}[char]));
+    }
+    function getAlertData(alert) { return alert && alert.data && typeof alert.data === "object" ? alert.data : (alert || {}); }
+    function getSeverity(data) { return data.suricata && data.suricata.severity != null ? String(data.suricata.severity) : "—"; }
+    function endpoint(value) {
+        if (!value) return "—";
+        const ip = value.ip || "—";
+        return value.port != null ? `${ip}:${value.port}` : ip;
+    }
+    function severityLabel(severity) {
+        return ({"1":"1 · High","2":"2 · Medium","3":"3 · Low","4":"4 · Informational"})[severity] || severity;
+    }
+    function renderAlerts() {
+        const query = alertSearch.value.trim().toLowerCase();
+        const severity = severityFilter.value;
+        const filtered = allAlerts.filter(item => {
+            const data = getAlertData(item), s = data.suricata || {};
+            const haystack = [s.signature,s.category,s.protocol,s.signature_id,data.source?.ip,data.destination?.ip,data.network?.transport].join(" ").toLowerCase();
+            return (!query || haystack.includes(query)) && (severity === "all" || getSeverity(data) === severity);
+        });
+        document.getElementById("alert-count").textContent = `${filtered.length} of ${allAlerts.length} alerts`;
+        if (!filtered.length) {
+            alertTable.innerHTML = `<tr><td colspan="5" class="empty-state">${allAlerts.length ? "No alerts match these filters." : "No Suricata alerts found."}</td></tr>`;
             return;
         }
-
-        table.innerHTML = result.alerts.map(alert => {
-            const data = alert.data;
-            const suricata = data.suricata || {};
-
-            const timestamp = data["@timestamp"]
-                ? new Date(data["@timestamp"]).toLocaleString()
-                : "—";
-
-            const signature = suricata.signature || "—";
-            const severity = suricata.severity ?? "—";
-
-            const source = data.source
-                ? `${data.source.ip || "—"}:${data.source.port || "—"}`
-                : "—";
-
-            const destination = data.destination
-                ? `${data.destination.ip || "—"}:${data.destination.port || "—"}`
-                : "—";
-
-            return `
-                <tr class="alert-row"
-                    onclick='showAlertDetails(${JSON.stringify(alert.data)})'>
-
-                    <td>${timestamp}</td>
-                    <td>${signature}</td>
-                    <td>
-                        <span class="severity severity-${severity}">
-                            ${severity}
-                        </span>
-                    </td>
-                    <td>${source}</td>
-                    <td>${destination}</td>
-
-                </tr>
-            `;
+        alertTable.innerHTML = filtered.map((item, index) => {
+            const data = getAlertData(item), s = data.suricata || {};
+            const timestamp = data["@timestamp"] ? new Date(data["@timestamp"]).toLocaleString() : "—";
+            const severityValue = getSeverity(data);
+            return `<tr class="alert-row" tabindex="0" role="button" data-alert-index="${index}" aria-label="Investigate ${escapeHtml(s.signature || "Suricata alert")}">
+                <td>${escapeHtml(timestamp)}</td><td>${escapeHtml(s.signature || "—")}</td>
+                <td><span class="severity severity-${escapeHtml(severityValue)}">${escapeHtml(severityLabel(severityValue))}</span></td>
+                <td>${escapeHtml(endpoint(data.source))}</td><td>${escapeHtml(endpoint(data.destination))}</td></tr>`;
         }).join("");
-
-    } catch (error) {
-        console.error("Failed to load Suricata alerts:", error);
-
-        document.getElementById("alerts-table").innerHTML = `
-            <tr>
-                <td colspan="5">Failed to load alerts.</td>
-            </tr>
-        `;
+        alertTable.querySelectorAll(".alert-row").forEach((row, index) => {
+            row.addEventListener("click", () => showAlertDetails(getAlertData(filtered[index]), row));
+            row.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); showAlertDetails(getAlertData(filtered[index]), row); } });
+        });
     }
-}
-
-            
+    async function loadAlerts() {
+        refreshButton.disabled = true;
+        refreshButton.textContent = "Refreshing…";
+        try {
+            const response = await fetch("/api/alerts?size=100", {headers:{"Accept":"application/json"}});
+            if (!response.ok) throw new Error(`API returned HTTP ${response.status}`);
+            const result = await response.json();
+            if (!result || (result.alerts != null && !Array.isArray(result.alerts))) throw new Error("Unexpected alerts API response");
+            allAlerts = Array.isArray(result.alerts) ? result.alerts : [];
+            renderAlerts();
+            document.getElementById("alerts-status-dot").className = "status-dot online";
+            document.getElementById("alerts-status-text").textContent = "API Connected";
+        } catch (error) {
+            console.error("Failed to load Suricata alerts:", error);
+            document.getElementById("alerts-status-dot").className = "status-dot offline";
+            document.getElementById("alerts-status-text").textContent = "API Unavailable";
+            document.getElementById("alert-count").textContent = "Unable to load";
+            alertTable.innerHTML = `<tr><td colspan="5" class="empty-state alert-error">Could not load alerts. Check the API connection and try again.</td></tr>`;
+        } finally {
+            refreshButton.disabled = false;
+            refreshButton.textContent = "Refresh alerts";
+        }
+    }
+    function detailItem(label, value) { return `<div class="detail-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value == null || value === "" ? "—" : value)}</strong></div>`; }
+    function detailSection(title, items) { return `<h3 class="detail-section-title">${escapeHtml(title)}</h3><div class="detail-grid">${items.join("")}</div>`; }
+    function showAlertDetails(data, row) {
+        lastFocusedRow = row || document.activeElement;
+        const s = data.suricata || {};
+        const flow = data.flow || {};
+        const http = data.http || {};
+        const dns = data.dns || {};
+        const risk = data.anomaly_score ?? data.anomaly?.score ?? data.risk_score ?? "Not available";
+        const details = [];
+        details.push(detailSection("Detection", [
+            detailItem("Signature", s.signature), detailItem("Category", s.category),
+            detailItem("Severity", severityLabel(getSeverity(data))), detailItem("Action", s.action),
+            detailItem("Signature ID", s.signature_id), detailItem("Anomaly / risk score", risk),
+            detailItem("Event ID", data.event?.id || data._id || data.id), detailItem("Timestamp", data["@timestamp"])
+        ]));
+        details.push(detailSection("Network context", [
+            detailItem("Source", endpoint(data.source)), detailItem("Destination", endpoint(data.destination)),
+            detailItem("Transport", data.network?.transport || s.protocol), detailItem("Application protocol", data.network?.protocol),
+            detailItem("Flow packets (to server)", flow.pkts_toserver), detailItem("Flow packets (to client)", flow.pkts_toclient),
+            detailItem("Flow bytes (to server)", flow.bytes_toserver), detailItem("Flow bytes (to client)", flow.bytes_toclient)
+        ]));
+        if (Object.keys(http).length) details.push(detailSection("HTTP evidence", [detailItem("Hostname", http.hostname),detailItem("URL", http.url),detailItem("HTTP method", http.http_method),detailItem("Status", http.status),detailItem("User agent", http.http_user_agent)]));
+        if (Object.keys(dns).length) details.push(detailSection("DNS evidence", [detailItem("Query", dns.rrname || dns.query),detailItem("Query type", dns.rrtype),detailItem("Response code", dns.rcode),detailItem("Answers", Array.isArray(dns.answers) ? dns.answers.join(", ") : dns.answers)]));
+        document.getElementById("alert-details").innerHTML = details.join("");
+        const modal = document.getElementById("alert-modal");
+        modal.classList.add("visible"); modal.setAttribute("aria-hidden", "false");
+        modal.querySelector("button").focus();
+    }
+    function closeAlertDetails() {
+        const modal = document.getElementById("alert-modal");
+        modal.classList.remove("visible"); modal.setAttribute("aria-hidden", "true");
+        if (lastFocusedRow && typeof lastFocusedRow.focus === "function") lastFocusedRow.focus();
+    }
+    alertSearch.addEventListener("input", renderAlerts);
+    severityFilter.addEventListener("change", renderAlerts);
+    refreshButton.addEventListener("click", loadAlerts);
+    document.getElementById("alert-modal").addEventListener("click", event => { if (event.target.id === "alert-modal") closeAlertDetails(); });
+    document.addEventListener("keydown", event => { if (event.key === "Escape") closeAlertDetails(); });
     loadAlerts();
-</script>
-<script>
-function showAlertDetails(data) {
-    const suricata = data.suricata || {};
-
-    document.getElementById("alert-details").innerHTML = `
-        <div class="detail-grid">
-
-            <div class="detail-item">
-                <span>Signature</span>
-                <strong>${suricata.signature || "—"}</strong>
-            </div>
-
-            <div class="detail-item">
-                <span>Category</span>
-                <strong>${suricata.category || "—"}</strong>
-            </div>
-
-            <div class="detail-item">
-                <span>Severity</span>
-                <strong>${suricata.severity ?? "—"}</strong>
-            </div>
-
-            <div class="detail-item">
-                <span>Action</span>
-                <strong>${suricata.action || "—"}</strong>
-            </div>
-
-            <div class="detail-item">
-                <span>Signature ID</span>
-                <strong>${suricata.signature_id || "—"}</strong>
-            </div>
-
-            <div class="detail-item">
-                <span>Protocol</span>
-                <strong>${suricata.protocol || "—"}</strong>
-            </div>
-
-            <div class="detail-item">
-                <span>Source</span>
-                <strong>
-                    ${data.source?.ip || "—"}:${data.source?.port || "—"}
-                </strong>
-            </div>
-
-            <div class="detail-item">
-                <span>Destination</span>
-                <strong>
-                    ${data.destination?.ip || "—"}:${data.destination?.port || "—"}
-                </strong>
-            </div>
-
-            <div class="detail-item">
-                <span>Transport</span>
-                <strong>${data.network?.transport || "—"}</strong>
-            </div>
-
-            <div class="detail-item">
-                <span>Timestamp</span>
-                <strong>${data["@timestamp"] || "—"}</strong>
-            </div>
-
-        </div>
-    `;
-
-    document.getElementById("alert-modal").classList.add("visible");
-}
-
-function closeAlertDetails() {
-    document.getElementById("alert-modal").classList.remove("visible");
-}
 </script>
 </body>
 </html>

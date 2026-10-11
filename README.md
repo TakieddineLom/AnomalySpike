@@ -46,27 +46,7 @@ AnomalySpike explores how open-source network sensors, a searchable event store,
 <div align="center">
   <img src="assets/AnomalySpike Cybersecurity Architecture Diagram.png" alt="AnomalySpike Architecture" width="1536">
 </div>
-```text
-              Network traffic
-                /         \
-             Zeek        Suricata
-               |             |
-         Zeek collectors   Alert collector
-               |             |
-               +------v------+
-                      |
-                  OpenSearch
-                      |
-                 FastAPI API
-                      |
-                 Web console
 
-       Events -> Feature aggregation -> Anomaly scoring
-                                            |
-                                  Anomaly index / UI
-
-       Security knowledge -> Retrieval search -> Investigation context
-```
 
 ### Data flow
 

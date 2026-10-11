@@ -1,9 +1,10 @@
 
 import json
+import ipaddress
 from pathlib import Path
 import socket
 import psutil
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Path as APIPath
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from opensearchpy import OpenSearch
@@ -367,6 +368,45 @@ def get_live_hosts(hours: int = 24):
         "count": len(hosts),
         "hosts": hosts,
     }
+
+@app.get("/api/hosts/{ip}/investigation")
+async def investigate_host_api(
+    ip: str = APIPath(..., description="IP address of the host to investigate"),
+):
+    """Return a consolidated, evidence-based investigation for a host."""
+    try:
+        # Validate before querying OpenSearch or loading the investigation module.
+        ipaddress.ip_address(ip)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail="A valid IPv4 or IPv6 address is required.",
+        ) from exc
+
+    try:
+        # Import lazily so the MCP server's embedding model is not loaded unless
+        # this endpoint is used. The workflow remains shared with the MCP tool.
+        from backend.app.mcp.server import investigate_host
+
+        result = await investigate_host(source_ip=ip)
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        # Log the underlying exception on the server, but avoid leaking internals
+        # such as filesystem paths or index details to API clients.
+        import logging
+        logging.getLogger(__name__).exception(
+            "Host investigation failed for %s", ip
+        )
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "The host investigation could not be completed. "
+                "Check the backend logs and OpenSearch/RAG availability."
+            ),
+        ) from exc
+
 
 @app.get("/api/hosts/{ip}/timeline")
 def get_host_timeline(ip: str, size: int = 100):

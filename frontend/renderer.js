@@ -1,3 +1,4 @@
+
 const API_BASE = "";
 
 let selectedNetwork = "";
@@ -398,39 +399,27 @@ if (preview.length > 280) {
 // Anomaly investigation
 // --------------------------------------------------
 
+
 async function openAnomalyDetails(anomaly) {
-
-    elements.modalTitle.textContent =
-        "Anomaly Investigation";
-
+    elements.modalTitle.textContent = "Anomaly Investigation";
     elements.modalSubtitle.textContent =
         "Host activity and detection evidence";
 
     const data = getData(anomaly);
-
     const host = getHost(anomaly);
-
     const timestamp = getTimestamp(anomaly);
-
     const type = getAnomalyType(anomaly);
 
     elements.modalContent.innerHTML = `
         <div class="detail-grid">
-
             <div class="detail-item">
                 <span>HOST</span>
-                <strong class="ip">
-                    ${escapeHtml(host)}
-                </strong>
+                <strong class="ip">${escapeHtml(host)}</strong>
             </div>
-
             <div class="detail-item">
                 <span>TIME</span>
-                <strong>
-                    ${escapeHtml(formatTime(timestamp))}
-                </strong>
+                <strong>${escapeHtml(formatTime(timestamp))}</strong>
             </div>
-
             <div class="detail-item">
                 <span>DETECTION</span>
                 <strong>
@@ -439,103 +428,277 @@ async function openAnomalyDetails(anomaly) {
                     </span>
                 </strong>
             </div>
-
             <div class="detail-item">
                 <span>SCORE</span>
-                <strong>
-                    ${escapeHtml(getScore(anomaly))}
-                </strong>
+                <strong>${escapeHtml(getScore(anomaly))}</strong>
             </div>
-
         </div>
 
         <h3>Detection Evidence</h3>
-
-        <div id="evidence-section" class="evidence-section">
+        <div class="evidence-section">
             ${renderEvidence(data)}
         </div>
 
-        <h3>Related Security Knowledge</h3>
+        <h3>Investigation Report</h3>
+        <div id="investigation-section" class="evidence-section">
+            <div class="loading">Building investigation report...</div>
+        </div>
 
+        <h3>Related Security Knowledge</h3>
         <div id="knowledge-section" class="evidence-section">
-            <div class="loading">
-                Searching knowledge base...
-            </div>
+            <div class="loading">Searching knowledge base...</div>
         </div>
 
         <h3>Host Timeline</h3>
-
         <div id="timeline-section" class="timeline-section">
-            <div class="loading">
-                Loading host timeline...
-            </div>
+            <div class="loading">Loading host timeline...</div>
         </div>
     `;
 
-
     elements.modal.classList.add("visible");
 
+    const investigationSection =
+        document.getElementById("investigation-section");
 
-    // Load related security knowledge based on the detection type
+    const knowledgeSection =
+        document.getElementById("knowledge-section");
+
+    const timelineSection =
+        document.getElementById("timeline-section");
+
+    // Load the investigation report.
     try {
-
-        const query = `${type.text} anomaly detection ${host}`;
-
-        const knowledgeResult =
-            await apiRequest(
-                `/api/knowledge/search?q=${encodeURIComponent(query)}&top_k=2`
-            );
-
-        renderKnowledge(
-            knowledgeResult.results || []
+        const report = await apiRequest(
+            `/api/hosts/${encodeURIComponent(host)}/investigation`
         );
 
+        renderInvestigation(report);
     } catch (error) {
-        console.error("Failed to load security knowledge:", error);
+        console.error("Investigation report error:", error);
 
-        const knowledgeSection = document.getElementById("knowledge-section");
-        if (knowledgeSection) {
-            knowledgeSection.innerHTML =
-                `<div class="loading">Unable to load security knowledge.</div>`;
+        if (investigationSection) {
+            investigationSection.innerHTML = `
+                <div class="error-message">
+                    Unable to load the investigation report.
+                    Check the backend logs and try again.
+                </div>
+            `;
         }
     }
 
-
-    // Load the actual host timeline from FastAPI
+    // Load related security knowledge.
     try {
+        const query = `${type.text} anomaly detection ${host}`;
 
-        const result =
-            await apiRequest(
-                `/api/hosts/${encodeURIComponent(host)}/timeline?size=20`
-            );
-
-        renderTimeline(
-            result.events || []
+        const result = await apiRequest(
+            `/api/knowledge/search?q=${encodeURIComponent(query)}&top_k=2`
         );
 
-
+        renderKnowledge(result.results || []);
     } catch (error) {
+        console.error("Security knowledge error:", error);
 
-        console.error(
-            "Timeline error:",
-            error
+        if (knowledgeSection) {
+            knowledgeSection.textContent =
+                "Unable to load security knowledge.";
+        }
+    }
+
+    // Load the host timeline.
+    try {
+        const result = await apiRequest(
+            `/api/hosts/${encodeURIComponent(host)}/timeline?size=20`
         );
 
-        const timeline =
-            document.getElementById(
-                "timeline-section"
-            );
+        renderTimeline(result.events || []);
+    } catch (error) {
+        console.error("Host timeline error:", error);
 
-        if (timeline) {
-
-            timeline.innerHTML = `
+        if (timelineSection) {
+            timelineSection.innerHTML = `
                 <div class="error-message">
-                    Unable to load host timeline.
+                    Unable to load the host timeline.
                 </div>
             `;
         }
     }
 }
+
+
+
+
+function renderInvestigation(response) {
+    const section = document.getElementById("investigation-section");
+    if (!section) return;
+
+    const profile = response?.profile?.profile || {};
+    const anomalies = Array.isArray(response?.anomalies)
+        ? response.anomalies
+        : [];
+
+    const latest = anomalies[0] || {};
+    const features = latest.features || {};
+    const anomaly = latest.anomaly || {};
+    const detection = latest.detection || {};
+    const evidence = Array.isArray(latest?.detection?.evidence)
+    ? latest.detection.evidence
+    : [];
+
+const evidenceHtml = evidence.length
+    ? `<ul>${evidence.map(item => `
+        <li>
+            <strong>${escapeHtml(item.feature || "Feature")}</strong>:
+            observed ${escapeHtml(item.current ?? "Unavailable")},
+            baseline maximum ${escapeHtml(item.baseline_max ?? "Unavailable")},
+            baseline mean ${escapeHtml(item.baseline_mean ?? "Unavailable")}.
+        </li>
+    `).join("")}</ul>`
+    : "<p>No feature-level evidence was attached to the latest anomaly record.</p>";
+
+    const profileBehavior = profile.behavior || {};
+    const latestTime = latest["@timestamp"];
+
+    const behavioralFlag = detection.behavioral_anomaly;
+    const mlFlag = detection.ml_anomaly;
+
+    let assessment;
+
+    if (behavioralFlag === true && mlFlag === true) {
+        assessment =
+            "Both behavioral and machine-learning detection flagged the latest available anomaly.";
+    } else if (behavioralFlag === false && mlFlag === true) {
+        assessment =
+            "The ML detector flagged this window, while the behavioral detector did not. Investigate the contributing features before determining whether the activity is malicious.";
+    } else if (behavioralFlag === true && mlFlag === false) {
+        assessment =
+            "The behavioral detector flagged this window, while the ML detector did not. Review the behavioral evidence and host context.";
+    } else {
+        assessment =
+            "The available data does not establish a confirmed threat. Review the anomaly records and supporting evidence.";
+    }
+
+    const metric = (label, value) => {
+    let displayValue = "Unavailable";
+
+    if (value !== undefined && value !== null) {
+        displayValue =
+            typeof value === "number"
+                ? value.toLocaleString()
+                : String(value);
+    }
+
+    return `
+        <div class="evidence-card">
+            <span class="evidence-label">${escapeHtml(label)}</span>
+            <strong class="evidence-value">${escapeHtml(displayValue)}</strong>
+        </div>
+    `;
+};
+
+    const formatBytes = value => {
+        if (value === undefined || value === null) return "Unavailable";
+        const bytes = Number(value);
+        if (!Number.isFinite(bytes)) return "Unavailable";
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    };
+
+    const formatDate = value => {
+        if (!value) return "Unavailable";
+        const date = new Date(value);
+        return Number.isNaN(date.getTime())
+            ? "Unavailable"
+            : date.toLocaleString();
+    };
+
+    section.innerHTML = `
+        <div class="investigation-assessment">
+            <strong>Assessment</strong>
+            <p>${escapeHtml(assessment)}</p>
+            <small>
+                An anomaly is a detection signal, not proof of malicious activity.
+            </small>
+        </div>
+
+        <div class="detection-evidence">
+            <h4>Latest Available Anomaly</h4>
+            <p><strong>Timestamp:</strong> ${escapeHtml(formatDate(latestTime))}</p>
+            <p><strong>Model:</strong> ${escapeHtml(anomaly.model || "Unavailable")}</p>
+            <p><strong>Version:</strong> ${escapeHtml(anomaly.version || "Unavailable")}</p>
+            <p><strong>Behavioral detection:</strong>
+                ${behavioralFlag === true ? "ANOMALY" :
+                  behavioralFlag === false ? "NORMAL" : "Unavailable"}
+            </p>
+            <p><strong>ML detection:</strong>
+                ${mlFlag === true ? "ANOMALY" :
+                  mlFlag === false ? "NORMAL" : "Unavailable"}
+            </p>
+        </div>
+
+        <div class="evidence-grid">
+            ${metric("Connections", features.connection_count)}
+            ${metric("DNS Queries", features.dns_query_count)}
+            ${metric("Unique Destinations", features.unique_destination_count)}
+            ${metric("Bytes Sent", formatBytes(features.bytes_sent))}
+            ${metric("Bytes Received", formatBytes(features.bytes_received))}
+            ${metric("Failed Connections", features.failed_connection_count)}
+        </div>
+
+        <div class="detection-evidence">
+    <h4>Detection Evidence</h4>
+    ${evidenceHtml}
+</div>
+
+        <div class="detection-evidence">
+            <h4>Host Profile</h4>
+            ${
+                response?.profile?.found
+                    ? `
+                        <p><strong>Profile timestamp:</strong>
+                            ${escapeHtml(formatDate(profile["@timestamp"]))}</p>
+                        <p><strong>Profile connections:</strong>
+                            ${escapeHtml(profileBehavior.connection_count ?? "Unavailable")}</p>
+                        <p><strong>Profile DNS queries:</strong>
+                            ${escapeHtml(profileBehavior.dns_query_count ?? "Unavailable")}</p>
+                        <p><strong>Unique destinations:</strong>
+                            ${escapeHtml(profileBehavior.unique_destination_count ?? "Unavailable")}</p>
+                    `
+                    : "<p>No host profile was found.</p>"
+            }
+        </div>
+
+        <div class="detection-evidence">
+            <h4>Recent Anomaly History</h4>
+            <p>${anomalies.length} anomaly record(s) returned by the API.</p>
+            ${
+                anomalies.length
+                    ? `<ul>${anomalies.slice(0, 5).map(item => `
+                        <li>
+                            ${escapeHtml(formatDate(item["@timestamp"]))}
+                            — connections:
+                            ${escapeHtml(item.features?.connection_count ?? "Unavailable")},
+                            ML score:
+                            ${escapeHtml(
+                                typeof item.anomaly?.ml_score === "number"
+                                    ? item.anomaly.ml_score.toFixed(4)
+                                    : "Unavailable"
+                            )},
+                            behavioral:
+                            ${item.detection?.behavioral_anomaly === true
+                                ? "ANOMALY"
+                                : item.detection?.behavioral_anomaly === false
+                                    ? "NORMAL"
+                                    : "Unavailable"}
+                        </li>
+                    `).join("")}</ul>`
+                    : "<p>No anomaly history is available.</p>"
+            }
+        </div>
+    `;
+}
+
+
 
 function renderEvidence(data) {
     const features = data.features || {};

@@ -142,14 +142,23 @@ async def investigate_host(source_ip: str):
     anomalies = await get_anomalies(source_ip=source_ip, size=20)
     timeline = await get_host_timeline(source_ip=source_ip, size=50)
 
+    # Retrieve the newest detection window, whether normal or anomalous.
+    latest_response = client.search(
+        index="anomalyspike-anomalies",
+        body={
+            "size": 1,
+            "query": {"term": {"source.ip": source_ip}},
+            "sort": [{"@timestamp": {"order": "desc"}}],
+        },
+    )
+    latest_hits = latest_response["hits"]["hits"]
+    latest_window = latest_hits[0]["_source"] if latest_hits else {}
+
     # ---------------------------------------------------------
-    # Extract latest anomaly features
+    # Extract latest detection-window features
     # ---------------------------------------------------------
 
-    latest_features = {}
-
-    if anomalies:
-        latest_features = anomalies[0].get("features", {})
+    latest_features = latest_window.get("features", {})
 
     connection_count = latest_features.get("connection_count", 0)
     unique_destinations = latest_features.get(
@@ -199,7 +208,7 @@ async def investigate_host(source_ip: str):
         if destination_ip:
             timeline_destinations.add(destination_ip)
 
-        state = event.get("zeek", {}).get("conn", {}).get("state")
+        state = event.get("zeek", {}).get("conn_state") or event.get("zeek", {}).get("conn", {}).get("state")
 
         if state in {"REJ", "RSTO", "RSTR", "S0"}:
             timeline_failed += 1
@@ -210,7 +219,7 @@ async def investigate_host(source_ip: str):
 
     profile_data = profile.get("profile", {}) if profile.get("found") else {}
 
-    profile_features = profile_data.get("features", {})
+    profile_features = (profile_data.get("behavior") or profile_data.get("features", {}))
 
     baseline_context = {
         "profile_available": bool(profile.get("found")),
@@ -219,6 +228,11 @@ async def investigate_host(source_ip: str):
         "timeline_failed_connections": timeline_failed,
         "timeline_event_types": timeline_event_types,
         "profile_features": profile_features,
+        "timeline_limit": 50,
+        "http_summary_scope": (
+            "HTTP events among the retrieved timeline events only; "
+            "not a complete HTTP history."
+        ),
     }
 
     # ---------------------------------------------------------
@@ -271,6 +285,23 @@ async def investigate_host(source_ip: str):
         observations.append(
             f"The recent timeline contains "
             f"{len(timeline_destinations)} unique destination IP(s)."
+        )
+
+    if http_events:
+        observations.append(
+            f"The retrieved timeline includes {len(http_events)} HTTP "
+            f"request event(s). Methods: {dict(http_methods)}; "
+            f"status codes: {dict(http_status_codes)}."
+        )
+        if http_paths:
+            observations.append(
+                f"Observed HTTP paths in the retrieved sample: "
+                f"{dict(http_paths.most_common(10))}."
+            )
+    else:
+        observations.append(
+            "No HTTP events were present in the retrieved timeline. "
+            "This does not establish that the host had no HTTP activity."
         )
 
     # ---------------------------------------------------------
@@ -386,6 +417,13 @@ async def investigate_host(source_ip: str):
             "host's normal DNS behavior."
         )
 
+    if http_events:
+        investigation_focus.append(
+            "Review HTTP paths, response codes, and destination services "
+            "against the host's expected application activity. Treat "
+            "successful responses as context, not proof of benign activity."
+        )
+
     if not profile.get("found"):
         investigation_focus.append(
             "Obtain a current correlated host profile before making a "
@@ -407,26 +445,99 @@ async def investigate_host(source_ip: str):
     # Assessment
     # ---------------------------------------------------------
 
-    if anomalies:
-        assessment = (
-            "The host exhibits behavior flagged by the anomaly detection "
-            "pipeline. The available profile and timeline provide contextual "
-            "evidence, but they are not sufficient on their own to determine "
-            "whether the behavior is malicious."
+    latest_anomaly = (latest_window.get("anomaly") or {})
+    latest_detection = (latest_window.get("detection") or {})
+    latest_timestamp = latest_window.get("@timestamp")
+
+    if not latest_window:
+        latest_status = "No detection window is available."
+    elif latest_anomaly.get("is_anomaly") is True:
+        latest_status = (
+            f"The latest detection window at {latest_timestamp} "
+            "is flagged as anomalous."
         )
     else:
-        assessment = (
-            "No anomaly was detected for this host in the available anomaly "
-            "index. The available timeline and profile can still be used to "
-            "establish its normal behavioral baseline."
+        latest_status = (
+            f"The latest detection window at {latest_timestamp} "
+            "is not flagged as anomalous."
         )
+
+    ml_flags = sum(
+        1 for item in anomalies
+        if (item.get("detection") or {}).get("ml_anomaly")
+        or (item.get("anomaly") or {}).get("ml_anomaly")
+    )
+    behavioral_flags = sum(
+        1 for item in anomalies
+        if (item.get("detection") or {}).get("behavioral_anomaly")
+        or (item.get("anomaly") or {}).get("behavioral_anomaly")
+    )
+
+    assessment = (
+        f"{latest_status} "
+        f"{len(anomalies)} historical flagged record(s) were retrieved "
+        f"(query limit: 20); {ml_flags} contain an ML anomaly flag and "
+        f"{behavioral_flags} contain a behavioral anomaly flag. "
+        "These are detection signals, not confirmed security incidents. "
+        "Review underlying events and operational context before drawing "
+        "conclusions about malicious activity."
+    )
+
+    # Summarize HTTP context from the existing host timeline.
+    # Informational only: this does not affect anomaly scoring.
+    from collections import Counter
+    from urllib.parse import urlsplit
+
+    http_events = [
+        event for event in timeline
+        if event.get("event", {}).get("type") == "http"
+    ]
+
+    http_methods = Counter()
+    http_status_codes = Counter()
+    http_paths = Counter()
+    http_destinations = set()
+
+    for event in http_events:
+        http = event.get("zeek", {}).get("http", {})
+
+        method = http.get("method")
+        if method:
+            http_methods[str(method)] += 1
+
+        status = http.get("status_code")
+        if status is not None:
+            http_status_codes[str(status)] += 1
+
+        uri = http.get("uri")
+        if uri:
+            # Keep only the path, never query parameters.
+            path = urlsplit(str(uri)).path or "/"
+            http_paths[path] += 1
+
+        destination = event.get("destination", {})
+        ip = destination.get("ip")
+        port = destination.get("port")
+        if ip:
+            http_destinations.add(f"{ip}:{port}" if port else str(ip))
+
+    http_summary = {
+        "request_count": len(http_events),
+        "methods": dict(http_methods),
+        "status_codes": dict(http_status_codes),
+        "paths": dict(http_paths.most_common(20)),
+        "destinations": sorted(http_destinations),
+        "informational_only": True,
+    }
 
     return {
         "source_ip": source_ip,
         "profile": profile,
         "anomalies": anomalies,
+        "latest_window": latest_window or None,
         "timeline": timeline,
         "knowledge": knowledge,
+        "http_summary": http_summary,
         "interpretation": {
             "observations": observations,
             "assessment": assessment,

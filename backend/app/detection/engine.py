@@ -389,7 +389,12 @@ def create_result(
 
             "model": "hybrid",
 
+            # Backward-compatible: retain the ML model version.
             "version": model_version,
+
+            # Explicit component versions.
+            "ml_model_version": model_version,
+            "engine_version": MODEL_VERSION,
         },
 
         "detection": {
@@ -631,13 +636,22 @@ def run():
         if result["detection"]["ml_anomaly"]:
             ml_signals += 1
 
-        # IMPORTANT:
-        # update baseline only AFTER detection.
+        # Protect the baseline from flagged windows.
+        # Only records considered normal by BOTH detectors
+        # are allowed to update the behavioral baseline.
 
-        update_baseline(
-            baselines,
-            record,
-        )
+        if not result["anomaly"]["is_anomaly"]:
+            update_baseline(
+                baselines,
+                record,
+            )
+        else:
+            print(
+                "[HYBRID] Baseline update skipped for "
+                f"flagged window: "
+                f"{record['data'].get('@timestamp')} "
+                f"source={record['data'].get('source', {}).get('ip', 'unknown')}"
+            )
 
     newest_timestamp = (
         new_records[-1]["data"]["@timestamp"]

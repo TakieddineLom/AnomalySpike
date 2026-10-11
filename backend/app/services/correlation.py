@@ -31,7 +31,7 @@ def get_recent_events(size=500):
             "sort": [
                 {
                     "@timestamp": {
-                        "order": "asc"
+                        "order": "desc"
                     }
                 }
             ]
@@ -133,8 +133,13 @@ def correlate_events(events):
 
 def store_correlations(results):
     for result in results:
+        source_ip = result.get("source", {}).get("ip")
+        if not source_ip:
+            continue
+
         client.index(
             index=CORRELATED_INDEX,
+            id=source_ip,
             body=result
         )
 

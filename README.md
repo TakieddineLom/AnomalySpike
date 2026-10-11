@@ -7,6 +7,8 @@
 
 ---
 
+
+
 AnomalySpike is a team-built cybersecurity prototype developed during the Thirduni programme. It brings together network telemetry, intrusion-detection alerts, machine-learning-based anomaly detection, and retrieval-based security knowledge to help small IT and security teams investigate potentially suspicious network activity.
 
 > **Project status:** Prototype. Detection coverage, operational reliability, and performance require further evaluation. Some components use test data, as noted below.
@@ -41,7 +43,9 @@ AnomalySpike explores how open-source network sensors, a searchable event store,
 - **Interface selection:** Lets an operator select the interface recorded in the monitoring configuration. Sensor services may need to be restarted before the selection takes effect.
 
 ## Architecture
-
+<div align="center">
+  <img src="assets/AnomalySpike Cybersecurity Architecture Diagram.png" alt="AnomalySpike Architecture" width="1536">
+</div>
 ```text
               Network traffic
                 /         \

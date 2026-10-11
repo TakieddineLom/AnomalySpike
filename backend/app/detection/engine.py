@@ -270,30 +270,10 @@ def baseline_for_record(
     )
 
 
-def update_baseline(
-    baselines,
-    record,
-):
-    """
-    Add the newly processed window to the host baseline.
-
-    The window is added AFTER detection.
-    """
-
+def update_baseline(baselines, record):
     data = record["data"]
-
-    source_ip = (
-        data.get("source", {})
-        .get("ip")
-    )
-
-    if not source_ip:
-        return
-
-    features = data.get(
-        "features",
-        {}
-    )
+    source_ip = data["source"]["ip"]
+    features = data["features"]
 
     if source_ip not in baselines:
         baselines[source_ip] = {
@@ -303,72 +283,43 @@ def update_baseline(
         }
 
     baseline = baselines[source_ip]
+    feature_stats = baseline.setdefault("features", {})
+    current_count = baseline.get("window_count", 0)
 
-    current_count = baseline.get(
-        "window_count",
-        0
-    )
+    # Older buggy state may have a count but no statistics.
+    # Its earlier observations cannot be recovered from this state.
+    if current_count > 0 and not feature_stats:
+        current_count = 0
+        baseline["window_count"] = 0
 
-    current_count += 1
+    new_count = current_count + 1
 
-    if current_count < MINIMUM_BASELINE_WINDOWS:
-        baseline["status"] = "insufficient_data"
-        baseline["window_count"] = current_count
-        return
+    for name in FEATURE_NAMES:
+        value = float(features.get(name, 0))
 
-    # Reconstruct feature statistics from
-    # the stored baseline plus the current
-    # observation.
-
-    for feature in FEATURE_NAMES:
-
-        current = float(
-            features.get(
-                feature,
-                0
-            )
-        )
-
-        if feature not in baseline["features"]:
-            baseline["features"][feature] = {
-                "min": current,
-                "max": current,
-                "mean": current,
+        if name not in feature_stats:
+            feature_stats[name] = {
+                "min": value,
+                "max": value,
+                "mean": value,
             }
-            continue
+        else:
+            stats = feature_stats[name]
+            old_mean = float(stats["mean"])
 
-        stats = baseline["features"][feature]
+            stats["mean"] = (
+                old_mean * current_count + value
+            ) / new_count
 
-        old_count = current_count - 1
+            stats["min"] = min(float(stats["min"]), value)
+            stats["max"] = max(float(stats["max"]), value)
 
-        old_mean = float(
-            stats.get(
-                "mean",
-                0
-            )
-        )
-
-        new_mean = (
-            (
-                old_mean * old_count
-            )
-            + current
-        ) / current_count
-
-        stats["min"] = min(
-            float(stats.get("min", current)),
-            current,
-        )
-
-        stats["max"] = max(
-            float(stats.get("max", current)),
-            current,
-        )
-
-        stats["mean"] = new_mean
-
-    baseline["status"] = "ready"
-    baseline["window_count"] = current_count
+    baseline["window_count"] = new_count
+    baseline["status"] = (
+        "ready"
+        if new_count >= MINIMUM_BASELINE_WINDOWS
+        else "insufficient_data"
+    )
 
 
 def create_result(

@@ -142,6 +142,54 @@ async def investigate_host(source_ip: str):
     anomalies = await get_anomalies(source_ip=source_ip, size=20)
     timeline = await get_host_timeline(source_ip=source_ip, size=50)
 
+    # Summarize HTTP context from the existing host timeline.
+    # Informational only: this does not affect anomaly scoring.
+    from collections import Counter
+    from urllib.parse import urlsplit
+
+    http_events = [
+        event for event in timeline
+        if event.get("event", {}).get("type") == "http"
+    ]
+
+    http_methods = Counter()
+    http_status_codes = Counter()
+    http_paths = Counter()
+    http_destinations = set()
+
+    for event in http_events:
+        http = event.get("zeek", {}).get("http", {})
+
+        method = http.get("method")
+        if method:
+            http_methods[str(method)] += 1
+
+        status = http.get("status_code")
+        if status is not None:
+            http_status_codes[str(status)] += 1
+
+        uri = http.get("uri")
+        if uri:
+            # Keep only the path, never query parameters.
+            path = urlsplit(str(uri)).path or "/"
+            http_paths[path] += 1
+
+        destination = event.get("destination", {})
+        ip = destination.get("ip")
+        port = destination.get("port")
+        if ip:
+            http_destinations.add(f"{ip}:{port}" if port else str(ip))
+
+    http_summary = {
+        "request_count": len(http_events),
+        "methods": dict(http_methods),
+        "status_codes": dict(http_status_codes),
+        "paths": dict(http_paths.most_common(20)),
+        "destinations": sorted(http_destinations),
+        "informational_only": True,
+    }
+
+
     # Retrieve the newest detection window, whether normal or anomalous.
     latest_response = client.search(
         index="anomalyspike-anomalies",
@@ -483,52 +531,6 @@ async def investigate_host(source_ip: str):
         "conclusions about malicious activity."
     )
 
-    # Summarize HTTP context from the existing host timeline.
-    # Informational only: this does not affect anomaly scoring.
-    from collections import Counter
-    from urllib.parse import urlsplit
-
-    http_events = [
-        event for event in timeline
-        if event.get("event", {}).get("type") == "http"
-    ]
-
-    http_methods = Counter()
-    http_status_codes = Counter()
-    http_paths = Counter()
-    http_destinations = set()
-
-    for event in http_events:
-        http = event.get("zeek", {}).get("http", {})
-
-        method = http.get("method")
-        if method:
-            http_methods[str(method)] += 1
-
-        status = http.get("status_code")
-        if status is not None:
-            http_status_codes[str(status)] += 1
-
-        uri = http.get("uri")
-        if uri:
-            # Keep only the path, never query parameters.
-            path = urlsplit(str(uri)).path or "/"
-            http_paths[path] += 1
-
-        destination = event.get("destination", {})
-        ip = destination.get("ip")
-        port = destination.get("port")
-        if ip:
-            http_destinations.add(f"{ip}:{port}" if port else str(ip))
-
-    http_summary = {
-        "request_count": len(http_events),
-        "methods": dict(http_methods),
-        "status_codes": dict(http_status_codes),
-        "paths": dict(http_paths.most_common(20)),
-        "destinations": sorted(http_destinations),
-        "informational_only": True,
-    }
 
     return {
         "source_ip": source_ip,

@@ -1,32 +1,42 @@
 <nav class="sidebar" aria-label="Main navigation">
-    <div class="sidebar-brand" aria-label="AnomalySpike">
-        <div class="sidebar-brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M8 27 17 5 29 18 35 18 48 5 56 29 52 45 40 56 25 56 12 44Z" fill="#A6FF83"/>
-                <path d="M17 12 22 25 13 32Z" fill="#0B0F14"/>
-                <path d="M48 12 43 25 52 32Z" fill="#0B0F14"/>
-                <path d="M20 31 29 27 27 36 20 39Z" fill="#0B0F14"/>
-                <path d="M44 31 35 27 37 36 44 39Z" fill="#0B0F14"/>
-                <path d="M29 40 32 37 35 40 32 45Z" fill="#18C8FF"/>
-                <path d="M26 48 32 51 38 48" stroke="#0B0F14" stroke-width="2.5" stroke-linecap="round"/>
-                <circle cx="40" cy="32" r="2.5" fill="#18C8FF"/>
-            </svg>
-        </div>
-        <div>
-            <div class="sidebar-brand-name">ANOMALY<span>SPIKE</span></div>
-            <div class="sidebar-brand-caption">Network Defense</div>
-        </div>
+    <div class="sidebar-brand">
+        <a class="sidebar-brand-link" href="/dashboard" aria-label="AnomalySpike dashboard">
+            <span class="sidebar-brand-mark" aria-hidden="true">
+                <img src="/static/assets/anomalyspike-logo.png" alt="" />
+            </span>
+            <span class="sidebar-brand-copy">
+                <span class="sidebar-brand-name">AnomalySpike<span>.</span></span>
+                <span class="sidebar-brand-caption">Network defense</span>
+            </span>
+        </a>
+        <button class="sidebar-close" type="button" aria-label="Close navigation">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
     </div>
+
     <div class="sidebar-search">
-        <input type="text" placeholder="Search" aria-label="Search navigation" />
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>
+        <input type="search" placeholder="Find a view" aria-label="Search navigation" autocomplete="off" />
+        <kbd>/</kbd>
     </div>
+
+    <div class="sidebar-section-label">Workspace</div>
     <ul class="sidebar-nav">
-        <li><a href="/dashboard" data-page="dashboard">Dashboard</a></li>
-        <li><a href="/alerts" data-page="alerts">Suricata Alerts</a></li>
-        <li><a href="/connections" data-page="connections">Connections</a></li>
-        <li><a href="/dns" data-page="dns">DNS Analysis</a></li>
-        <li><a href="/threats" data-page="threats">Threat Detection</a></li>
-        <li><a href="/hosts" data-page="hosts">Connected Hosts</a></li>
-        <li><a href="/settings" data-page="settings">Settings</a></li>
+        <li><a href="/dashboard" data-page="dashboard"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg><span>Dashboard</span></a></li>
+        <li><a href="/alerts" data-page="alerts"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.8 19h18.4L12 3Z" /><path d="M12 9v4.5M12 17h.01" /></svg><span>Suricata alerts</span></a></li>
+        <li><a href="/connections" data-page="connections"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="6" r="2.5" /><circle cx="18" cy="18" r="2.5" /><path d="m8.3 10.9 7.4-3.8M8.3 13.1l7.4 3.8" /></svg><span>Connections</span></a></li>
+        <li><a href="/dns" data-page="dns"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3.5 9h17M3.5 15h17M12 3c2.2 2.4 3.3 5.4 3.3 9S14.2 18.6 12 21c-2.2-2.4-3.3-5.4-3.3-9S9.8 5.4 12 3Z" /></svg><span>DNS analysis</span></a></li>
+        <li><a href="/threats" data-page="threats"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.7 8.1 7 10 4.3-1.9 7-5.4 7-10V6l-7-3Z" /><path d="m9 12 2 2 4-4" /></svg><span>Threat detection</span></a></li>
+        <li><a href="/hosts" data-page="hosts"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></svg><span>Connected hosts</span></a></li>
     </ul>
+
+    <div class="sidebar-section-label sidebar-section-label--system">System</div>
+    <ul class="sidebar-nav">
+        <li><a href="/settings" data-page="settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z" /></svg><span>Settings</span></a></li>
+    </ul>
+
+    <div class="sidebar-foot">
+        <span class="sidebar-foot-pulse" aria-hidden="true"></span>
+        <span><strong>Defense engine</strong><small>Live monitoring active</small></span>
+    </div>
 </nav>

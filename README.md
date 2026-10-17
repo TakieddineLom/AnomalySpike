@@ -87,7 +87,7 @@ The application also exposes API endpoints, including `/api/status`, `/api/healt
 
 ## Requirements
 
-The current development deployment uses Ubuntu, Python, Docker with Docker Compose, OpenSearch, Zeek, and Suricata.
+The current development deployment uses Ubuntu, Python 3.12 or newer, Docker with Docker Compose, OpenSearch, Zeek, and Suricata. The pinned NumPy and SciPy releases require Python 3.12 or newer.
 
 Python dependencies are pinned in `backend/requirements.txt`.
 
@@ -106,14 +106,28 @@ cd AnomalySpike
 
 ### 2. Create a Python environment
 
+On Ubuntu/Linux, use Python 3.12 or newer:
+
 ```bash
-python3 -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r backend/requirements.txt
 ```
 
-Use a Python version compatible with the pinned dependencies. Dependency installation should be tested on the target machine before using this procedure as a production deployment guide.
+On Windows, install 64-bit Python 3.12 or newer, then run these commands in PowerShell from the repository root. If `.venv` was created with Python 3.11, deactivate it and remove that environment before creating the new one.
+
+```powershell
+py -3.12 --version
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+.\.venv\Scripts\python.exe -m pip check
+```
+
+Run `py -0p` to see which Python versions are registered with the launcher. For Python 3.13, replace `py -3.12` with `py -3.13`; if the launcher does not list an installed compatible interpreter, use its full `python.exe` path. A failed `pip install -r backend/requirements.txt` stops before installing Uvicorn, so running the server will then report `No module named uvicorn`.
+
+Dependency installation should be tested on the target machine before using this procedure as a production deployment guide.
 
 ### 3. Configure supporting services
 
@@ -129,12 +143,21 @@ The included `docker-compose.yml` configures OpenSearch with its security plugin
 
 ### 4. Start FastAPI
 
-From the repository root:
+From the repository root on Ubuntu/Linux:
 
 ```bash
 source .venv/bin/activate
 python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
 ```
+
+On Windows, use the interpreter in the new environment:
+
+```powershell
+$env:HF_HOME = (Join-Path (Get-Location) '.hf-cache')
+.\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
+```
+
+The first launch downloads the sentence-transformer model into `.hf-cache` and requires internet access. Later launches can use the cached model.
 
 Open `http://127.0.0.1:8000` in a browser on the same machine.
 

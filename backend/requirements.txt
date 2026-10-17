@@ -1,3 +1,4 @@
+# Python 3.12 or newer is required by the pinned NumPy and SciPy releases.
 fastapi==0.141.1
 uvicorn[standard]==0.53.0
 opensearch-py==3.2.0

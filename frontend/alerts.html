@@ -4,29 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Suricata Alerts - AnomalySpike</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <style>
-        .alert-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 16px}
-        .alert-toolbar input,.alert-toolbar select{background:#0b0f14;color:#e6edf3;border:1px solid #26323d;border-radius:8px;padding:10px 12px;min-height:40px}
-        .alert-toolbar input{flex:1;min-width:220px}
-        .alert-toolbar button,.modal-action{background:#a6ff83;color:#0b0f14;border:0;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer}
-        .alert-toolbar button:disabled{opacity:.6;cursor:wait}
-        .alert-row{cursor:pointer;transition:background .15s ease}
-        .alert-row:hover,.alert-row:focus{background:rgba(166,255,131,.07);outline:1px solid rgba(166,255,131,.28);outline-offset:-1px}
-        .alert-row:focus{outline:2px solid #18c8ff;outline-offset:-2px}
-        .severity{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:700;background:#26323d;color:#e6edf3}
-        .severity-1{background:rgba(255,93,103,.16);color:#ff5d67}.severity-2{background:rgba(255,180,84,.15);color:#ffb454}.severity-3{background:rgba(24,200,255,.13);color:#18c8ff}.severity-4{background:rgba(166,255,131,.12);color:#a6ff83}
-        .alert-modal{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.72);padding:24px;overflow:auto}
-        .alert-modal.visible{display:flex;align-items:flex-start;justify-content:center}
-        .alert-modal-content{width:min(900px,100%);margin:auto;background:#151c24;border:1px solid #26323d;border-radius:14px;box-shadow:0 24px 80px rgba(0,0,0,.5);overflow:hidden}
-        .alert-modal-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;border-bottom:1px solid #26323d}
-        .alert-modal-header h2{margin:0;font-size:20px}.alert-modal-header button{background:transparent;color:#e6edf3;border:0;font-size:28px;cursor:pointer}
-        #alert-details{padding:22px}.detail-section-title{margin:22px 0 12px;color:#a6ff83;font-size:13px;text-transform:uppercase;letter-spacing:.08em}.detail-section-title:first-child{margin-top:0}
-        .detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.detail-item{min-width:0;background:#0b0f14;border:1px solid #26323d;border-radius:9px;padding:12px}.detail-item span{display:block;color:#8b9aa8;font-size:12px;margin-bottom:6px}.detail-item strong{display:block;color:#e6edf3;overflow-wrap:anywhere;font-size:14px;font-weight:600}
-        .alert-count{color:#8b9aa8;font-size:12px;margin-left:auto}.table-container tbody tr td{vertical-align:middle}
-        .empty-state{padding:24px!important;text-align:center;color:#8b9aa8}.alert-error{color:#ff5d67!important}
-        @media(max-width:640px){.alert-modal{padding:10px}.detail-grid{grid-template-columns:1fr}.alert-toolbar input{min-width:100%}.alert-modal-content{margin:auto 0}}
-    </style>
+    <link rel="stylesheet" href="/static/style.css?v=20261015e">
 </head>
 <body>
 <div id="alert-modal" class="alert-modal" role="dialog" aria-modal="true" aria-labelledby="alert-modal-title" aria-hidden="true">
@@ -75,7 +53,7 @@
         </section>
     </main>
 </div>
-<script src="/static/shared.js"></script>
+<script src="/static/shared.js?v=20261015b"></script>
 <script>
     loadSidebar("alerts");
     const alertTable = document.getElementById("alerts-table");

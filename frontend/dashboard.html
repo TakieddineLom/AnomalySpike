@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AnomalySpike — Security Overview</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v=20261015e">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -159,7 +159,7 @@
     </div>
 </div>
 
-<script src="/static/shared.js"></script>
+<script src="/static/shared.js?v=20261015b"></script>
 <script src="/static/renderer.js"></script>
 <script>
     loadSidebar("dashboard");
@@ -223,16 +223,16 @@
             } else {
                 const ctx = canvas.getContext("2d");
                 const gradient = ctx.createLinearGradient(0, 0, 0, 280);
-                gradient.addColorStop(0, "rgba(166, 255, 131, 0.24)");
-                gradient.addColorStop(1, "rgba(166, 255, 131, 0.01)");
+                gradient.addColorStop(0, "rgba(187, 247, 139, 0.20)");
+                gradient.addColorStop(1, "rgba(187, 247, 139, 0.005)");
                 eventsChart = new Chart(ctx, {
                     type: "line",
                     data: { labels, datasets: [{
                         label: "Network Events", data: values,
-                        borderColor: "#A6FF83", backgroundColor: gradient,
+                        borderColor: "#BBF78B", backgroundColor: gradient,
                         tension: 0.32, fill: true, borderWidth: 2,
                         pointRadius: 1.5, pointHoverRadius: 5,
-                        pointBackgroundColor: "#18C8FF"
+                        pointBackgroundColor: "#D5FFB3"
                     }] },
                     options: {
                         responsive: true, maintainAspectRatio: false,
@@ -243,11 +243,11 @@
                             tooltip: { callbacks: { label: c => ` ${c.parsed.y.toLocaleString()} events` } }
                         },
                         scales: {
-                            y: { beginAtZero: true, grid: { color: "rgba(139,154,168,0.12)" },
-                                ticks: { color: "#8B9AA8", callback: value => Number(value).toLocaleString() },
-                                title: { display: true, text: "Events", color: "#8B9AA8" } },
-                            x: { grid: { display: false }, ticks: { color: "#8B9AA8", maxTicksLimit: 8 },
-                                title: { display: true, text: "Time", color: "#8B9AA8" } }
+                            y: { beginAtZero: true, grid: { color: "rgba(226,239,218,0.08)" },
+                                ticks: { color: "#818B7E", callback: value => Number(value).toLocaleString() },
+                                title: { display: true, text: "Events", color: "#818B7E" } },
+                            x: { grid: { display: false }, ticks: { color: "#818B7E", maxTicksLimit: 8 },
+                                title: { display: true, text: "Time", color: "#818B7E" } }
                         }
                     }
                 });

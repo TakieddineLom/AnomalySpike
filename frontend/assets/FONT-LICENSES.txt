@@ -1,0 +1,11 @@
+Manrope — copyright The Manrope Project Authors
+https://github.com/sharanda/manrope
+License: SIL Open Font License 1.1. Full text: Manrope-OFL.txt
+
+IBM Plex Mono — copyright IBM Corp.
+https://github.com/IBM/plex
+License: SIL Open Font License 1.1. Full text: IBM-Plex-Mono-OFL.txt
+
+Latin WOFF2 font files downloaded from Google Fonts and served locally.
+The original AnomalySpike logo and architecture diagram are copied from
+the adjacent AnomalySpike project and are not covered by these font licenses.

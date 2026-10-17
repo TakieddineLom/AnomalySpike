@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connected Hosts - AnomalySpike</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v=20261015e">
 </head>
 <body>
 <header class="topbar">
@@ -64,7 +64,7 @@
     </main>
 </div>
 
-<script src="/static/shared.js"></script>
+<script src="/static/shared.js?v=20261015b"></script>
 <script>
     loadSidebar("hosts");
 
@@ -100,9 +100,9 @@
     }
 
     function activityLabel(score) {
-        if (score >= 75) return { label: "High activity", color: "#FFB454" };
-        if (score >= 40) return { label: "Moderate", color: "#18C8FF" };
-        return { label: "Lower activity", color: "#A6FF83" };
+        if (score >= 75) return { label: "High activity", color: "#E8B577" };
+        if (score >= 40) return { label: "Moderate", color: "#91C9C3" };
+        return { label: "Lower activity", color: "#BBF78B" };
     }
 
     function renderHosts() {

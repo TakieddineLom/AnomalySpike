@@ -75,15 +75,16 @@ The application also exposes API endpoints, including `/api/status`, `/api/healt
 
 ## Technology stack
 
-- **Language:** Python, HTML, CSS, JavaScript
-- **API and web server:** FastAPI, Uvicorn
-- **Search and event storage:** OpenSearch
-- **Network visibility:** Zeek
-- **Intrusion detection:** Suricata
-- **Machine learning and numerical processing:** scikit-learn, PyOD, NumPy, SciPy, joblib
-- **Knowledge retrieval and embeddings:** sentence-transformers, PyTorch
+- **Languages:** Python, JavaScript, HTML, CSS
+- **Frontend:** Next.js
+- **Backend and API server:** FastAPI, Uvicorn
+- **Machine learning and anomaly detection:** PyOD, Isolation Forest, scikit-learn, NumPy, SciPy, Joblib
+- **Data storage and search:** OpenSearch
+- **Network security and telemetry:** Zeek, Suricata
+- **Knowledge retrieval:** Sentence Transformers (`all-MiniLM-L6-v2`), embeddings, and similarity-based search over a local cybersecurity knowledge index
 - **Tool integration:** Model Context Protocol (MCP)
-- **Deployment components:** Ubuntu/Linux, Docker Compose, systemd, cron
+- **Supporting libraries:** Pydantic, Python-dotenv, psutil
+- **Deployment and service management:** Ubuntu/Linux, Docker Compose, systemd, cron
 
 ## Requirements
 
@@ -220,17 +221,23 @@ These commands check Python syntax and JavaScript syntax; they do not test the f
 
 ## Team contributions
 
-Replace the placeholders before submission. Describe the work each person actually completed.
-
-- **[Team member 1 — full name]:** [Specific contribution to implementation, testing, research, design, or documentation.]
-- **[Team member 2 — full name]:** [Specific contribution.]
-- **[Team member 3 — full name]:** [Specific contribution.]
-
-Add or remove entries to match the actual team.
+- **TAKIEDDINE Lombarkia — Project Lead, Infrastructure and AI Integration:** Defined the project concept and overall technical direction; worked on the security infrastructure and integration of machine-learning anomaly detection, retrieval-augmented generation (RAG), and MCP-based investigation capabilities.
+- **Yacine Soualem — Front-End and Landing Page Development:** Responsible for front-end development and the public landing page, presenting the platform's purpose, capabilities, and architecture.
+- **KATIA Ghezali — Back-End Development and Code Optimization:** Responsible for back-end development and code optimization.
 
 ## AI tools and external resources
 
-Complete this section accurately before submission. List the AI tools used during development and explain briefly how they supported the work. Also acknowledge significant external libraries, frameworks, and references where appropriate. Do not claim a tool was used unless it was.
+### AI-assisted development
+
+The team used **ChatGPT** and **Claude** to support development and debugging, including troubleshooting technical issues and exploring implementation approaches. The team reviewed and adapted the assistance as part of its development process and remains responsible for the architecture, technical decisions, integration, and implementation.
+
+### Open-source technologies and knowledge resources
+
+AnomalySpike uses the open-source technologies and libraries listed in the technology stack. Backend Python dependencies are documented in `backend/requirements.txt`.
+
+The knowledge-retrieval component generates text embeddings using Sentence Transformers (`all-MiniLM-L6-v2`) and performs similarity-based searches against a local cybersecurity knowledge index. Retrieved material provides investigative context; it should not be treated as conclusive proof that an event is malicious.
+
+Third-party technologies and resources remain subject to their respective licenses and terms.
 
 ## Next three months
 

@@ -239,9 +239,15 @@ The knowledge-retrieval component generates text embeddings using Sentence Trans
 
 Third-party technologies and resources remain subject to their respective licenses and terms.
 
-## Next three months
+## Future Work
 
-Our next priority is to make AnomalySpike easier to install and evaluate, validate its detection pipeline against repeatable benign and suspicious traffic scenarios, and improve the analyst investigation workflow. We plan to document model limitations and test results, strengthen deployment and security guidance, and explore safe, human-approved response integration. The goal is a reproducible prototype that small IT and security teams can evaluate, rather than adding features without validation.
+AnomalySpike's next development phase will focus on three priorities:
+
+- **From IDS to IPS:** Integrate a firewall to support controlled, auditable blocking of malicious devices, with safeguards against false positives.
+- **Local LLM and Digital Sovereignty:** Develop a locally hosted large language model (LLM) to reduce dependence on external AI services and give organizations greater control over their data and AI infrastructure.
+- **Improved Machine Learning:** Refine and evaluate the anomaly detection models through further tuning and validation against real network activity.
+
+These improvements aim to make AnomalySpike more reliable while giving organizations greater control over their cybersecurity infrastructure and data.
 
 ## Project information
 

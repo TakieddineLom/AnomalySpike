@@ -2,16 +2,14 @@
   <img src="assets/anomalyspike-logo.png" alt="AnomalySpike fennec fox logo" width="420">
   <h1>AnomalySpike</h1>
   <p><strong>AI-assisted network security monitoring and anomaly investigation.</strong></p>
-  <p><a href="https://github.com/TakieddineLom/AnomalySpike">Repository</a> · Thirduni programme · Research and development prototype</p>
+  <p><a href="https://github.com/TakieddineLom/AnomalySpike">Repository</a> · Thirduni programme · Working MVP</p>
 </div>
 
 ---
 
+AnomalySpike is a team-built, self-hosted cybersecurity MVP developed during the Thirduni programme. It combines network telemetry, intrusion-detection alerts, machine-learning-based anomaly detection, and local cybersecurity knowledge retrieval to help small IT and security teams investigate potentially suspicious network activity.
 
-
-AnomalySpike is a team-built cybersecurity prototype developed during the Thirduni programme. It brings together network telemetry, intrusion-detection alerts, machine-learning-based anomaly detection, and retrieval-based security knowledge to help small IT and security teams investigate potentially suspicious network activity.
-
-> **Project status:** Prototype. Detection coverage, operational reliability, and performance require further evaluation. Some components use test data, as noted below.
+> **Project status:** Working MVP using real network data. Some views may still rely on test data; the DNS page currently uses a static test file rather than live Zeek DNS logs.
 
 ## Contents
 
@@ -21,23 +19,26 @@ AnomalySpike is a team-built cybersecurity prototype developed during the Thirdu
 - [Web console](#web-console)
 - [Technology stack](#technology-stack)
 - [Requirements and setup](#requirements)
+- [Existing development service operations](#existing-development-service-operations)
 - [Development checks](#development-checks)
-- [Known limitations](#known-limitations)
 - [Team contributions](#team-contributions)
+- [AI tools and external resources](#ai-tools-and-external-resources)
+- [Future work](#future-work)
 - [Project information](#project-information)
 
 ## The problem
 
 Security teams often need to move between network logs, IDS alerts, and reference documentation to understand suspicious activity. Smaller teams may not have the resources for complex commercial monitoring platforms.
 
-AnomalySpike explores how open-source network sensors, a searchable event store, anomaly scoring, and security knowledge retrieval can make this investigation workflow more accessible.
+AnomalySpike brings open-source network sensors, a searchable event store, anomaly scoring, and security knowledge retrieval into one investigation workflow. It is designed for teams that want to operate the platform within infrastructure they control.
 
 ## Features
 
 - **Network telemetry:** Collects and indexes events produced by Zeek.
 - **IDS alerts:** Ingests Suricata alerts for review in the web console.
 - **Anomaly detection:** Aggregates network activity into host-behaviour feature windows and scores them with the project's detection pipeline.
-- **Security knowledge search:** Retrieves relevant information from a small security knowledge base, including MITRE ATT&CK and network-behaviour notes.
+- **Security knowledge search:** Retrieves relevant information from a local cybersecurity knowledge base, including MITRE ATT&CK and network-behaviour notes.
+- **MCP investigation tools:** Exposes selected investigation capabilities through the Model Context Protocol (MCP), including tools for searching events and examining host activity.
 - **Host investigation:** Provides views for reviewing hosts and their observed activity.
 - **Web console:** Dashboard, alerts, connections, DNS analysis, threat detection, hosts, and interface settings.
 - **Interface selection:** Lets an operator select the interface recorded in the monitoring configuration. Sensor services may need to be restarted before the selection takes effect.
@@ -55,9 +56,10 @@ AnomalySpike explores how open-source network sensors, a searchable event store,
 3. Feature aggregation builds host-behaviour windows from observed events.
 4. The detection pipeline scores feature windows and stores flagged anomalies.
 5. FastAPI exposes API endpoints and serves the browser-based console.
-6. The retrieval-based knowledge component searches a small security reference collection to provide additional investigation context.
+6. The local knowledge-retrieval component searches a cybersecurity reference collection to provide additional investigation context.
+7. MCP exposes selected investigation functions as tools for compatible clients.
 
-The actual data sources and collection behaviour vary by component. See [Known limitations](#known-limitations) before interpreting the output as a complete live security-monitoring system.
+Data availability varies by component. In particular, the DNS page currently uses static test data and should not be interpreted as live DNS monitoring.
 
 ## Web console
 
@@ -66,7 +68,7 @@ The actual data sources and collection behaviour vary by component. See [Known l
 | Dashboard | `/dashboard` | Overview of monitoring activity |
 | Suricata alerts | `/alerts` | Review indexed IDS alerts |
 | Connections | `/connections` | Inspect indexed Zeek connection events |
-| DNS analysis | `/dns` | Review DNS data; currently uses a static test file |
+| DNS analysis | `/dns` | Review DNS data; currently uses a static test file rather than live Zeek DNS logs |
 | Threat detection | `/threats` | Review detected anomalies and related knowledge |
 | Connected hosts | `/hosts` | Inspect hosts observed in indexed events |
 | Settings | `/settings` | Select the monitored network interface |
@@ -76,7 +78,7 @@ The application also exposes API endpoints, including `/api/status`, `/api/healt
 ## Technology stack
 
 - **Languages:** Python, JavaScript, HTML, CSS
-- **Frontend:** Next.js
+- **Frontend:** Browser-based web console using JavaScript, HTML, and CSS
 - **Backend and API server:** FastAPI, Uvicorn
 - **Machine learning and anomaly detection:** PyOD, Isolation Forest, scikit-learn, NumPy, SciPy, Joblib
 - **Data storage and search:** OpenSearch
@@ -244,4 +246,4 @@ These improvements aim to make AnomalySpike more reliable while giving organizat
 - **Programme:** Thirduni
 - **Project:** AnomalySpike
 - **Repository:** https://github.com/TakieddineLom/AnomalySpike
-- **Status:** Research and development prototype
+- **Status:** Working MVP; ongoing research and development

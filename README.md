@@ -209,16 +209,6 @@ node --check frontend/renderer.js
 
 These commands check Python syntax and JavaScript syntax; they do not test the full monitoring pipeline.
 
-## Known limitations
-
-- **DNS data:** The DNS collector currently reads a static test file rather than the live Zeek DNS log. The DNS page must not be presented as live DNS monitoring until this is corrected and verified.
-- **Suricata ingestion:** The collector may not backfill alerts generated during a crash or restart window.
-- **Knowledge coverage:** The retrieval knowledge base is small. Search results are supporting context, not proof that a security event is malicious.
-- **Detection validation:** Anomaly scores and flags need evaluation against repeatable benign and suspicious traffic scenarios. An anomaly is not automatically a confirmed attack.
-- **Deployment portability:** The current backend includes a machine-specific monitoring configuration path.
-- **Operational readiness:** The prototype requires further validation of installation, service recovery, access controls, and sustained operation before production use.
-- **Automated response:** Do not assume that blocking, quarantine, or other automated enforcement is implemented unless it is demonstrated and documented in the submitted version.
-
 ## Team contributions
 
 - **TAKIEDDINE Lombarkia — Project Lead, Infrastructure and AI Integration:** Defined the project concept and overall technical direction; worked on the security infrastructure and integration of machine-learning anomaly detection, retrieval-augmented generation (RAG), and MCP-based investigation capabilities.

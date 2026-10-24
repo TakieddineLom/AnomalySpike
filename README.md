@@ -2,9 +2,12 @@
   <img src="assets/anomalyspike-logo.png" alt="AnomalySpike fennec fox logo" width="420">
   <h1>AnomalySpike</h1>
   <p><strong>AI-assisted network security monitoring and anomaly investigation.</strong></p>
-  <p><a href="https://github.com/TakieddineLom/AnomalySpike">Repository</a> · Thirduni programme · Working MVP</p>
+  <p>
+    <a href="https://anomalyspike.vercel.app/">Landing Page</a> ·
+    <a href="https://github.com/TakieddineLom/AnomalySpike">GitHub Repository</a> ·
+    Thirduni Programme · Working MVP
+  </p>
 </div>
-
 ---
 
 AnomalySpike is a team-built, self-hosted cybersecurity MVP developed during the Thirduni programme. It combines network telemetry, intrusion-detection alerts, machine-learning-based anomaly detection, and local cybersecurity knowledge retrieval to help small IT and security teams investigate potentially suspicious network activity.
